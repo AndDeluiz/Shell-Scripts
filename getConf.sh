@@ -1,5 +1,11 @@
 #!/bin/bash
-
+################################################################################
+# @author      Anderson Deluiz (anderson.deluiz at gmail dot com)              #
+# @name        getConf.sh                                                      #
+# @version     0.3                                                             #
+# @description Gets various configurations from running system                 #
+#
+################################################################################
 for vSection in system kernel cpu memory swap pci disk multipath pvs vgs lvs df passwd group limits network dns ntp services
 do
    echo "========================================================================"
