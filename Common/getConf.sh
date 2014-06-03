@@ -118,75 +118,75 @@ getConfLinux()
 
 getconfAIX()
 {
-   for vSection in system dump swap mpio pvs vgs lvs df passwd group limits network dns ntp services
+   for vSection in system dump swap mpio pvs vgs lvs df network dns ntp
    do
       echo "========================================================================"
       echo "SECTION: ${vSection}"
       echo "------------------------------------------------------------------------"
+      echo
       case ${vSection} in
          'system')
             if [ $(uname -L) != "-1 NULL" ]
             then
                # this is a LPAR system
+               echo "---- LPAR settings"
                lpartstat -i
             fi
-            echo "\n------------------------------------------------------------------------\n"
+            echo "---- System Configuration Information"
             prtconf
-            echo "\n------------------------------------------------------------------------\n"
+            echo "---- System Configuration Information with VPD"
             prtconf -v
-            echo "\n------------------------------------------------------------------------\n"
+            echo "---- System (sys0) attributes"
             lsattr -El sys0
             ;;
          'dump')
+            echo "---- AIX dump settings"
             sysdumpdev -l
+            echo "---- AIX dump estimated size in bytes"
+            sysdumpdev -e
             ;;
          'swap')
+            echo "---- Paging space devices settings"
             lsps -a
             ;;
          'mpio')
+            echo "---- MPIO paths status"
             lspath
             ;;
          'pvs')
+            echo "---- Physical volumes defined in system"
             lspv
             ;;
          'vgs')
-            echo "\n------------------------------------------------------------------------\n"
-            echo "Defined VGs in system"
-            echo "\n------------------------------------------------------------------------\n"
+            echo "---- Defined VGs in system"
             lsvg
-            echo "\n------------------------------------------------------------------------\n"
-            echo "Varied on (Online) VGs in system"
-            echo "\n------------------------------------------------------------------------\n"
+            echo "---- Varied on (Online) VGs in system"
             lsvg -o
             ;;
          'lvs')
-            echo "\n------------------------------------------------------------------------\n"
-            echo "Defined Logical Volumes (LV) in system (Online VGs only)"
-            echo "\n------------------------------------------------------------------------\n"
+            echo "---- Defined Logical Volumes (LV) in system (Online VGs only)"
             lsvg -o | lsvg -i -l 
             ;;
          'df')
+            echo "---- Mounted filesystems"
             df -gI
-            ;;
-         'limits')
-            cat /etc/security/limits.conf
+            echo "---- Mounted filesystems settings"
+            mount
             ;;
          'network')
+            echo "---- IP network interfaces"
             ifconfig -a
             ;;
          'dns')
+            echo "---- DNS settings"
             cat /etc/resolv.conf
             ;;
          'ntp')
-            chkconfig --list ntpd
+            echo "---- NTP daemon settings"
+            lssrc -s xntpd
             ntpq -p
-            echo "******************** /etc/ntp.conf *******************"
+            echo "---- NTP configuration"
             grep -v '^#' /etc/ntp.conf
-            ;;
-         'services')
-            chkconfig --list 
-            echo "******************** Running Network Services *******************"
-            netstat -lpn
             ;;
       esac
    done
