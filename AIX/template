@@ -9,6 +9,8 @@
 # @usage                                                                       #
 ################################################################################
 
+#---------------------------        INCLUDE       -----------------------------#
+
 #---------------------------     DEBUG OPTIONS    -----------------------------#
 # uncomment line(s) to activate debug function
 # set -x    # print a trace of simple commands and their arguments
@@ -40,3 +42,4 @@ usage()
 }
 
 #---------------------------     MAIN SECTION     -----------------------------#
+exit 0
