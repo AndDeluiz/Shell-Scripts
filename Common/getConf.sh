@@ -9,9 +9,9 @@
 ################################################################################
 
 #---------------------------    DEBUG OPTIONS     -----------------------------#
-# set -x
-# set -v
-# set -n
+# set -x    # print a trace of simple commands and their arguments
+# set -v    # print shell input lines as they are read
+# set -n    # read commands but do not execute them
 
 #---------------------------   GLOBAL VARIABLES   -----------------------------#
 vMyName=$(basename $0)
