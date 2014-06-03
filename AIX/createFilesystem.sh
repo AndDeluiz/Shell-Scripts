@@ -40,9 +40,14 @@ usage()
    echo "   User - user owner of new jfs2 filesystem mount point (default: root)"
    echo "   Group - group owner of new jfs2 filesystem mount point (default: system)"
    echo "   Permission - Permissions (octal mode) of new jfs2 filesystem mount point (default: 750)"
-   echo "   Option - jfs2 filesystem mount options"
-   echo "   FSLog - jfs2 filesystem log device (default: INLINE)"
+   echo "   Option - optional jfs2 filesystem mount options (separeted by dots. eg.: rw.cio)"
+   echo "   FSLog - optional jfs2 filesystem log device (default: existing log device in VG)"
    echo
+   echo "Example:"
+   echo "/app01,lvapp01,1,rootvg,appusr,appgrp,755,rbrw.cio.dio,INLINE"
+   echo "/app02,lvapp02,1,rootvg,appusr,appgrp,775,rbrw,"
+   echo "/app03,lvapp03,1,rootvg,appusr,appgrp,700,,INLINE"
+   echo "/app04,lvapp04,1,rootvg,appusr,appgrp,755,,"
    exit 255
 }
 
