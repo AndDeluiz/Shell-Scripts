@@ -2,7 +2,7 @@
 ################################################################################
 # @author      Anderson Deluiz (Twitter: @AndDeluiz)                           #
 # @name        getConf.sh                                                      #
-# @version     0.3                                                             #
+# @version     0.5                                                             #
 # @date        June 2nd, 2014                                                  #
 # @description Gets various configurations from running system                 #
 # @usage       getConf.sh                                                      #
@@ -25,7 +25,6 @@ usage()
    echo
    echo "   H - generate report in HTML format (Not yet implemented)"
    echo "   h - display this message and exit"
-   echo "   v - display version and exit"
    echo "   x - generate report in XML format (Not yet implemented)"
    echo
    exit 255
@@ -33,83 +32,109 @@ usage()
 
 parse()
 {
-   :
+   while getopts h vCmdArg
+   do
+      case ${vCmdArg} in
+         'h')
+            usage
+            ;;
+         '?')
+            echo "ERROR: -${vCmdArg} Invalid option"
+            usage
+            ;;
+            
+      esac
+   done
 }
 
 getConfLinux()
 {
-   for vSection in system kernel cpu memory swap pci disk multipath pvs vgs lvs df passwd group limits network dns ntp services
+   for vSection in system kernel cpu memory swap pci disk multipath pvs vgs lvs df limits network dns ntp services
    do
       echo "========================================================================"
       echo "SECTION: ${vSection}"
       echo "------------------------------------------------------------------------"
       case ${vSection} in
          'system')
+            echo "---- Hardware"
             dmidecode -t system
             ;;
          'kernel')
+            echo "---- Running Kernel version"
             uname -a
             echo
             cat /etc/redhat-release
-            echo "******************** /etc/sysctl.conf *******************"
+            echo "---- /etc/sysctl.conf file"
             cat /etc/sysctl.conf
-            echo "******************** sysctl -a *******************"
+            echo "---- Running kernel settings"
             sysctl -a
             ;;
          'cpu')
+            echo "---- Installed CPU settings"
             cat /proc/cpuinfo
             ;;
          'memory')
+            echo "---- Physical and virtual memory"
             free -m
             ;;
          'swap')
+            echo "---- Swap space settings"
             swapon -s
             ;;
          'pci')
+            echo "---- PCI devices installed"
             lspci
             ;;
          'disk')
+            echo "---- Physical disks partitions"
             fdisk -l
             ;;
          'multipath')
+            echo "---- Multipath configured devices"
             multipath -ll
             ;;
          'pvs')
+            echo "---- LVM Physical Volumes"
             pvs
             ;;
          'vgs')
+            echo "---- LVM Volume Groups"
             vgs
             ;;
          'lvs')
+            echo "---- LVM Logical Volumes"
             lvs
             ;;
          'df')
-            df -gI
-            ;;
-         'passwd')
-            cat /etc/passwd
-            ;;
-         'group')
-            cat /etc/group
+            echo "---- Mounted filesystems settings"
+            mount
+            echo "---- Mounted filesystems disk usage"
+            df -mI
             ;;
          'limits')
+            echo "---- /etc/security/limits.conf file"
             cat /etc/security/limits.conf
             ;;
          'network')
+            echo "---- Network Interfaces"
             ifconfig -a
             ;;
          'dns')
+            echo "---- DNS resolver settings"
             cat /etc/resolv.conf
             ;;
          'ntp')
+            echo "---- Check if NTP service is installed"
             chkconfig --list ntpd
+            echo "---- Check if NTP service is running"
             ntpq -p
-            echo "******************** /etc/ntp.conf *******************"
+            echo "---- /etc/ntp.conf config file"
             grep -v '^#' /etc/ntp.conf
             ;;
          'services')
+            echo "---- Configured Network Services"
             chkconfig --list 
-            echo "******************** Running Network Services *******************"
+            echo "---- Network ports in listen mode"
             netstat -lpn
             ;;
       esac
@@ -193,3 +218,16 @@ getconfAIX()
 }
 
 #---------------------------         MAIN         -----------------------------#
+parse
+
+case ${vOSName} in
+   'AIX')
+      getConfAIX
+      ;;
+   'Linux')
+      getConfLinux
+      ;;
+   *)
+      usage
+      ;;
+esac
