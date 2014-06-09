@@ -336,7 +336,7 @@ checkASMDisk()
    if [ $(lsdev -l $1 | cut -f 2) = "Available" ]
    then
       echo "INFO: Device $1 seems to be available. Checking PV header..."
-      lquerypv -h /dev/$1 20 10 | fgrep "4F52434C 4449534B" > /dev/null
+      lquerypv -h /dev/$1 20 10 | fgrep '4F52434C 4449534B' > /dev/null
       if [ $? -eq 0 ]
       then
          echo "INFO: Device $1 is labeled as an Oracle ASM volume."
@@ -348,6 +348,37 @@ checkASMDisk()
    fi
    echo "INFO: Device $1 is not available on this system."
    return 1
+}
+
+#------------------------------------------------------------------------------#
+# @function    findTCPPortPid                                                  #
+# @description Find PID using a TCP port.                                      #
+# @usage       findTCPPortPid TCPPort                                          #
+# @in          TCPPort - TCP Port to be checked.                               #
+# @return      none                                                            #
+# @return-code                                                                 #
+#              0 - Success                                                     #
+#              1 -                                                             #
+#------------------------------------------------------------------------------#
+findTCPPortPid()
+{
+   checkOS $0 AIX \
+      || {
+            echo "$0: this function only works with AIX."
+            exit 254
+         }
+
+   [ $# -ne 1 ] \
+      && {
+            echo "$0(): wrong number of parameters"
+            exit -1
+         }
+
+   local vSocketID
+   local vPID
+   vSocketID=$(netstat -Aan | grep $1 | awk '{print $1}')
+   vPID=$(rmsock ${vSocketID} tcpcb | awk '{print $9}')
+   ps -o user,group,pid,ppid,etime,args -p ${vPID}
 }
 
 #---------------------------     MAIN SECTION     -----------------------------#
