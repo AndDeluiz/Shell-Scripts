@@ -9,6 +9,9 @@
 #              other distros as well).                                         #
 #                                                                              #
 # @usage       swissKnife.sh <function-name>                                   #
+# @exit-code                                                                   #
+#              254 - Wrong operating system                                    #
+#              255 - Wrong program usage                                       #
 ################################################################################
 
 #---------------------------        INCLUDE       -----------------------------#
@@ -39,14 +42,21 @@ vOSName=$(uname -s)
 #------------------------------------------------------------------------------#
 usage()
 {
-   :
+   echo "usage: ${vMyName} [-hlv] [name] [param1 param2 param3 ...]"
+   echo
+   echo "Options:"
+   echo "   -h    Display this message and exit."
+   echo "   -l    List available funcions and descriptions"
+   echo "   -v    Display version number and exit."
+   echo
    exit 255
 }
+
 #------------------------------------------------------------------------------#
-# @function    exitDoor                                                        #
-# @description Display exit message based on received parameters and exit      #
+# @function    checkOS                                                         #
+# @description Check OS name and version/distribution.                         #
 #                                                                              #
-# @usage       usage                                                           #
+# @usage       checkOS "AIX | Linux" [string2]                                 #
 # @in          none                                                            #
 # @return      none                                                            #
 # @return-code                                                                 #
@@ -54,25 +64,32 @@ usage()
 # @exit-code                                                                   #
 #              255 - normal exit code                                          #
 #------------------------------------------------------------------------------#
-exitDoor()
+checkOS()
 {
    :
 }
+
 #------------------------------------------------------------------------------#
 # @function    checkProcPageSpace                                              #
-# @description #
+# @description Displays processes paging space use in descending order.        #
 #                                                                              #
-# @usage       usage                                                           #
+# @usage       checkProcPageSpace                                              #
 # @in          none                                                            #
 # @return      none                                                            #
 # @return-code                                                                 #
 #              none                                                            #
 # @exit-code                                                                   #
-#              255 - normal exit code                                          #
+#              0 - normal exit code                                            #
 #------------------------------------------------------------------------------#
-checkProcPageSpace
+checkProcPageSpace()
 {
-   [ ${vOSName} != "AIX" ] && exitDoor 1 checkProcPageSpace
+   
+   [ ${vOSName} != "AIX" ] && { echo "$0: this function only works with AIX."
+                                exit 254
+                              }
+                              
+   echo "$0: Checking paging space use. This may take a while..."
+   echo
    echo "     Pid Command          Inuse      Pin     Pgsp  Virtual 64-bit Mthrd LPage"
    svmon -P | \
       awk ' BEGIN {FLAG=0}
