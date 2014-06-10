@@ -12,6 +12,7 @@
 # @license     GPLv3 - GNU Public License version 3                            # 
 # @exit-code                                                                   #
 #               -1 - Internal error (wrong parameter number, etc.)             #
+#              253 - Running user is not root                                  #
 #              254 - Wrong operating system                                    #
 #              255 - Wrong program usage                                       #
 ################################################################################
@@ -379,6 +380,55 @@ findTCPPortPid()
    vSocketID=$(netstat -Aan | grep $1 | awk '{print $1}')
    vPID=$(rmsock ${vSocketID} tcpcb | awk '{print $9}')
    ps -o user,group,pid,ppid,etime,args -p ${vPID}
+}
+
+#------------------------------------------------------------------------------#
+# @function    dropFSCache                                                     #
+# @description Clean filesystem cache in Linux (must be root)                  #
+# @usage       dropFSCache <number>                                            #
+# @in          number - Integer value from 1 to 3                              #
+#                       1 - free pagecache                                     #
+#                       2 - free dentries and inodes                           #
+#                       3 - free pagecache, dentries and inodes                #
+# @return      none                                                            #
+# @return-code                                                                 #
+#              0 - Success                                                     #
+#              1 -                                                             #
+#------------------------------------------------------------------------------#
+dropFSCache()
+{
+   checkOS $0 Linux \
+      || {
+            echo "$0: this function only works with Linux."
+            exit 254
+         }
+
+   [ $# -ne 1 ] \
+      && {
+            echo "$0(): wrong number of parameters"
+            exit -1
+         }
+
+   if [ $(id -un) = 'root' ]
+   then
+      echo "INFO: Actual cache size = $(free -m | awk '/^Mem:/ ~ {print $6+$7}') MB"
+      echo "INFO: Performing cache cleaning. This may take a while..."
+      sysctl -w vm.drop_caches=3 > /dev/null \
+         && {
+               echo "INFO: Done"
+               sysctl -w vm.drop_cache=0 > /dev/null 2>&1
+               return 0
+            } \
+         || {
+               echo "ERROR: Could not perform command. Check errors above."
+               return 1
+            }
+   else
+      echo "ERROR: Must be root to perform $0."
+      exit 253
+   fi
+   
+   return 0
 }
 
 #---------------------------     MAIN SECTION     -----------------------------#
