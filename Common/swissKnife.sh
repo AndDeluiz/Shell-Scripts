@@ -217,16 +217,17 @@ getVGDA()
 }
 
 #------------------------------------------------------------------------------#
-# @function    checkCore                                                       #
-# @description Check core file to detect crashing application                  #
-# @usage       checkCore file                                                  #
+# @function    checkSysCore                                                    #
+# @description Check system core file to detect crashing application (AIX only)#
+#                                                                              #
+# @usage       checkCore <file>                                                #
 # @in          file - core file name and location                              #
 # @return      none                                                            #
 # @return-code                                                                 #
 #              0 - Success                                                     #
 #              1 - Core file doesn't exist or isn't readable                   #
 #------------------------------------------------------------------------------#
-checkCore()
+checkSysCore()
 {
    checkOS $0 AIX \
       || {
@@ -246,20 +247,22 @@ checkCore()
 
    echo "INFO: checking $1 file..."
    lquerypv -h $1 6b0 64
+   echo "INFO: extended data for $1 file"
+   echo "stat\n status\n t -m" | crash $1
    return $?
 }
 
 #------------------------------------------------------------------------------#
-# @function    checkCoreFile                                                   #
-# @description Prints information about a given core file                      #
-# @usage       checkCoreFile <core>                                            #
-# @in          core - Path to core file                                        #
+# @function    checkAppCore                                                    #
+# @description Check application core file (AIX Only)                          #
+# @usage       checkCoreFile <file>                                            #
+# @in          file - Path to core file                                        #
 # @return      none                                                            #
 # @return-code                                                                 #
 #              0 - Success                                                     #
 #              1 - Core file doens't exist or isn't readable by user           #
 #------------------------------------------------------------------------------#
-checkCoreFile()
+checkAppCore()
 {
    checkOS $0 AIX \
       || {
@@ -285,8 +288,8 @@ checkCoreFile()
 
 #------------------------------------------------------------------------------#
 # @function    checkDumpfile                                                   #
-# @description Check dumpfile to detect crashing application                   #
-# @usage       checkDump file                                                  #
+# @description Check dumpfile to detect crashing application (Linux only)      #
+# @usage       checkDump <file>                                                #
 # @in          file - core file name and location                              #
 # @return      none                                                            #
 # @return-code                                                                 #
@@ -540,6 +543,32 @@ listIOPath()
          ;;
       'Linux')
          multipath -ll
+         ;;
+   esac
+}
+
+#------------------------------------------------------------------------------#
+# @function    checkFCAdapter                                                  #
+# @description Check Fibre Channel adapter device                              #
+# @usage       checkFCAdapter                                                  #
+# @in          none                                                            #
+# @return      none                                                            #
+# @return-code                                                                 #
+#              0 - Success                                                     #
+#              1 - Core file doens't exist or isn't readable by user           #
+#------------------------------------------------------------------------------#
+checkFCAdapter()
+{
+   case ${vOSName} in
+      'AIX')
+         for vAdapter in $(lsdev -Cc adapter | sed '/^fcs[0-9]/p;s/ *//')
+         do
+            echo "================================================================================"
+            fcstat ${vAdapter}
+         done
+         ;;
+      'Linux')
+         systool -c scsi_host -v
          ;;
    esac
 }
