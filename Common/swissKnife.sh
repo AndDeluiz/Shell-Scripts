@@ -561,7 +561,7 @@ checkFCAdapter()
 {
    case ${vOSName} in
       'AIX')
-         for vAdapter in $(lsdev -Cc adapter | sed '/^fcs[0-9]/p;s/ *//')
+         for vAdapter in $(lsdev -Cc adapter | sed '/^fcs[0-9]/s/ .*//')
          do
             echo "================================================================================"
             fcstat ${vAdapter}
