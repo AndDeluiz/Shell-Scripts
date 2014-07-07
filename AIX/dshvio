@@ -1,0 +1,94 @@
+#!/bin/ksh
+# Created by Dean Rowswell, IBM, April 26, 2006
+# Modified by Dean Rowswell, IBM, October 11, 2007
+#       Added a check for the -r flag for a root user command.
+#       NOTE: this flag will require the expect RPM package to be installed.
+# Modified by Dean Rowswell, IBM, October 12, 2007
+#       Added a check for the -n flag to specify a single or multiple VIO
+#       servers.
+#
+#------------------------------------------------------------------------------
+# Pre-requisites (can be found at AIX Toolbox CD):
+#    tcl-8.4.7-3.aix5.1.ppc.rpm
+#    tk-8.4.7-3.aix5.1.ppc.rpm
+#    expect-5.42.1-3.aix5.1.ppc.rpm
+#
+# Assumption: this server is a trusted host for running ssh commands to
+# the VIO server(s)
+#   To set this up:
+#     ssh-keygen -t dsa (press ENTER for all prompts)
+#     scp $HOME/.ssh/id_dsa.pub padmin@VIOserver:.ssh/authorized_keys2
+#
+# NOTE: if the VIO server responds with "rksh: ioscli:  not found" then
+# login to the VIO server and change to the root shell via oem_setup_env.
+# Edit /etc/ssh/sshd_config
+#       Change: PermitUserEnvironment no
+#       To: PermitUserEnvironment yes
+#       Run: stopsrc -s sshd ; startsrc -s sshd
+#------------------------------------------------------------------------------
+
+#===========================================================#
+# Define the list of VIO servers in this variable
+#===========================================================#
+#VIOS="vios1 vios3"
+VIOS=""
+#===========================================================#
+
+DisplayUsage() {
+   echo "Syntax: dshvio COMMAND\n  Run dshvio -? for the valid parameters"
+   exit
+}
+
+if [ ${#*} -eq 0 ]
+then
+      DisplayUsage
+else
+      while getopts :rn: PARMS
+        do
+         case $PARMS in
+          r) lslpp -L|grep -w expect >/dev/null
+               if [ $? -ne 0 ]
+                 then
+                   echo "ERROR: cannot use -r flag because expect\
+RPM package is not installed"
+                   exit 1
+                 else
+                   ROOT=1
+               fi ;;
+          n) VIOS=${OPTARG}
+                VIOS=`echo ${VIOS}|sed 's/,/ /g'`;;
+          ?) echo "Valid parameters are:\n  -r for a root command\n\
+  -n for a list of VIO servers\n  -n vios1\n  -n vios1,vios2" ; exit ;;
+         esac
+        done
+
+        shift $(($OPTIND -1))
+        VIOSCMD=${*}
+        if [ ${#VIOSCMD} -eq 0 ]
+        then
+                DisplayUsage
+        fi
+fi
+
+for VIO in ${VIOS}
+do
+  ping -c1 ${VIO} >/dev/null 2>/dev/null
+if [ $? -eq 0 ]
+    then
+    echo "======================\nVIO server --> ${VIO}\n\
+======================"
+        if [ ${ROOT:=0} -ne 1 ]
+        then
+         ssh padmin@${VIO} "ioscli ${VIOSCMD}"
+        else
+         expect -c "spawn ssh padmin@${VIO} ;expect \"\$\*\";\
+send \"oem_setup_env\\r\";expect \"\#\*\";send \"${VIOSCMD}\\r\";\
+send \"exit\\r\";expect \"\$\*\";send \"exit\\r\""|egrep -v "^spawn\
+|^Last|oem_setup_env|^exit|^#"
+        fi
+     else
+        echo "===================\\nVIO server --> ${VIO}\n\
+==================="
+        echo "VIO server: ${VIO} is not responding"
+     fi
+done
