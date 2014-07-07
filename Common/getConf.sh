@@ -25,6 +25,7 @@ usage()
    echo
    echo "   H - generate report in HTML format (Not yet implemented)"
    echo "   h - display this message and exit"
+   echo "   v - gather information about VIO Server"
    echo "   x - generate report in XML format (Not yet implemented)"
    echo
    exit 255
@@ -32,13 +33,16 @@ usage()
 
 parse()
 {
-   while getopts h vCmdArg
+   while getopts hv vCmdArg
    do
       case ${vCmdArg} in
          'h')
             usage
             ;;
-         '?')
+         'v')
+            isVIOS=1
+            ;;
+         *)
             echo "ERROR: -${vCmdArg} Invalid option"
             usage
             ;;
@@ -217,17 +221,59 @@ getconfAIX()
    done
 }
 
+getConfVIOS()
+{
+   echo "========================================================================"
+   echo " Virtual IO Server"
+   echo "========================================================================"
+   echo "------------------------------------------------------------------------"
+   echo " VIOS Level"
+   echo "------------------------------------------------------------------------"
+   /usr/ios/cli/ioscli ioslevel
+   echo "------------------------------------------------------------------------"
+   echo " License Information"
+   echo "------------------------------------------------------------------------"
+   /usr/ios/cli/ioscli license
+   echo "------------------------------------------------------------------------"
+   echo " Virtual Devices"
+   echo "------------------------------------------------------------------------"
+   /usr/ios/cli/ioscli lsdev -virtual
+   echo "------------------------------------------------------------------------"
+   echo " Virtual Disk Devices"
+   echo "------------------------------------------------------------------------"
+   /usr/ios/cli/ioscli lsdev -type disk | grep -i 'virtual'
+   echo "------------------------------------------------------------------------"
+   echo " Virtual Disk Devices"
+   echo "------------------------------------------------------------------------"
+   /usr/ios/cli/ioscli lsdev -type adapter | grep -i 'virtual'
+   echo "------------------------------------------------------------------------"
+   echo " Virtual SCSI Device Mapping"
+   echo "------------------------------------------------------------------------"
+   /usr/ios/cli/ioscli lsmap -all
+   echo "------------------------------------------------------------------------"
+   echo " Virtual Network Device Mapping"
+   echo "------------------------------------------------------------------------"
+   /usr/ios/cli/ioscli lsmap -all -net
+   echo "------------------------------------------------------------------------"
+   echo " Virtual Fibre Channel (NPIV) Device Mapping"
+   echo "------------------------------------------------------------------------"
+   /usr/ios/cli/ioscli lsmap -all -npiv
+}
 #---------------------------         MAIN         -----------------------------#
-parse
+parse $*
 
 case ${vOSName} in
    'AIX')
       getConfAIX
+      [ ${isVIOS} -eq 1 ] && getConfVIOS
       ;;
    'Linux')
       getConfLinux
+      echo "isVIOS = ${isVIOS}"
       ;;
    *)
       usage
       ;;
 esac
+
+exit 0
