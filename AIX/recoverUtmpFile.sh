@@ -4,7 +4,7 @@
 # @name        recoverUtmpFile.sh                                              #
 # @version     1.0                                                             #
 # @date        July 24, 2014                                                   #
-# @description Cean out entries in the /etc/utmp file that have no current     #
+# @description Clean out entries in the /etc/utmp file that have no current    #
 #              matching correct process in the process table.                  #
 #              This MUST be run by the root user, either from the command line #
 #              or from the root crontab entry.                                 #
@@ -33,30 +33,33 @@ vUtmpFilePath=/etc/utmp
 
 #---------------------------       FUNCTIONS      -----------------------------#
 
-#------------------------------------------------------------------------------#
-# @function    usage                                                           #
-# @description Displays usage of this script and help messages and exit script.#
-#                                                                              #
-# @usage       usage                                                           #
-# @in          none                                                            #
-# @return      none                                                            #
-# @return-code                                                                 #
-#              none                                                            #
-# @exit-code                                                                   #
-#              255 - normal exit code                                          #
-#------------------------------------------------------------------------------#
-usage()
-{
-   :
-   exit 255
-}
 
 #---------------------------     MAIN SECTION     -----------------------------#
+_BOLD_ON_=$(tput smso)
+_BOLD_OFF_=$(tput rmso)
+
+echo "This procedure cleans out entries in the ${vUtmpFilePath} file that have no"
+echo "current matching correct process in the process table."
+echo "It is recommended that you disable system login by creating /etc/nologin file"
+echo "before proceeding.\n"
+echo "${_BOLD_ON_}ATTENTION!!!     ATTENTION!!!     ATTENTION!!!${_BOLD_OFF_}\n"
+echo "There is a chance that this procedure may corrupt the /etc/utmp file."
+echo "If you are unsure to proceed, rebooting may correct your problem."
+echo "The ${vUtmpFilePath} file is recreated with each boot.\n"
+echo "Do you want to continue (y/n)? \c "
+read vOption
+
+if [ ${vOption} != "Y" -o ${vOption} != "y" ]
+then
+   echo "\nExited by user request."
+   exit 1
+fi
+
 if [ ! -s ${vFwtmpCmd} ]
 then
 # accounting fileset (bos.acct) not installed
    print "Accounting (bos.acct fileset) must be installed first, fwtmp command does not exist"
-   exit
+   exit 1
 fi
 
 vSum=1
