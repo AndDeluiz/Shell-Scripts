@@ -1,3 +1,15 @@
+################################################################################
+# @author      Anderson Deluiz (Twitter: @AndDeluiz)                           #
+# @name        bashCmdAudit.sh                                                 #
+# @version     1.0                                                             #
+# @date        Aug 12th, 2014                                                  #
+# @description Improves bash command history logging                           #
+# @usage       As root user:                                                   #
+#              1. Copy this file to /etc/profile.d/bashCmdAudit.sh             #
+#              2. Change permissions to 0644                                   #
+#              3. Changes will be available after users logout and login again #
+################################################################################
+
 # ======================= BASH Command History Logging ======================= #
 
 # Funcao para registrar todos os comandos executados via syslog.
