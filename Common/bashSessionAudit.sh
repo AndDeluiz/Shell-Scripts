@@ -1,6 +1,6 @@
 ################################################################################
 # @author      Anderson Deluiz (Twitter: @AndDeluiz)                           #
-# @name        bashCmdAudit.sh                                                 #
+# @name        bashSessionAudit.sh                                             #
 # @version     1.0                                                             #
 # @date        Aug 12th, 2014                                                  #
 # @description Improves bash command history logging.                          #
@@ -37,7 +37,7 @@
 #              - Bash shell version 4 or later                                 #
 #                                                                              #
 # @usage       As root user:                                                   #
-#              1. Copy this file to /etc/profile.d/bashCmdAudit.sh.            #
+#              1. Copy this file to /etc/profile.d/bashSessionAudit.sh         #
 #              2. Change permissions to 0644 and owner/group to root/root      #
 #              3. Configure syslog (or rsyslog) to receive messages with       #
 #                 priority defined in syslogPriority variable.                 #
@@ -136,7 +136,7 @@ log2Syslog ()
    # vazios (somente ENTER) ou CTRL-D.
    if [ ${actualCmdLogLine:-0} -ne ${lastCmdLogLine:-0} ] || [ ${actualCmdLogLine:-0} -eq "1" ]
    then
-      logger -p ${syslogPriority} -t bash_audit -i -- "${auditPreString} CWD: ${PWD} COMMAND: ${actualCmdToLog/+([ 0-9:-])/}"
+      logger -p ${syslogPriority} -t bash_audit -i -- "${auditPreString} CWD: ${PWD} COMMAND: ${actualCmdToLog/*????-??-?? ??:??:??/}"
       return 0
    else
       return 1
