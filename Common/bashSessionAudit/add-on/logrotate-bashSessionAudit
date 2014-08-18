@@ -1,0 +1,29 @@
+################################################################################
+# @author      Anderson Deluiz (Twitter: @AndDeluiz)                           #
+# @name        bashSessionAudit                                                #
+# @version     1.0                                                             #
+# @date        Aug 18th, 2014                                                  #
+# @description Logrotate settings for bashSessionAudit script.                 #
+#              This config file must be copied to /etc/logrotate.d directory   #
+#              and point to the file configured in syslog (or rsyslog) to log  #
+#              bash commands recorded by bashSessionAudit.sh script.           #
+#                                                                              #
+# @require     - Syslog (or rsyslog) daemon configured and working             #
+#              - Logrotate configured and active.                              #
+#                                                                              #
+# @usage       As root user:                                                   #
+#              1. Copy this file to /etc/logrotate.d directory.                #
+################################################################################
+
+/var/log/bash_audit.log
+{
+    rotate 4
+    size 10M
+    weekly
+    create 0640 root root
+    missingok
+    sharedscripts
+    postrotate
+	/bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true
+    endscript
+}
