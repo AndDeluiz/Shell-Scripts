@@ -1,0 +1,116 @@
+#!/usr/bin/ksh
+################################################################################
+# @author      Anderson Deluiz (Twitter: @AndDeluiz)                           #
+# @name        backupVios                                                      #
+# @version     0.9                                                             #
+# @date        Aug 22, 2014                                                    #
+# @description Creates an installable image of VIOS root volume group onto a   #
+#              filesystem. It can also backup virtual and logical configuration#
+#              of VIOS to disk using viobr command.                            #
+# @usage                                                                       #
+################################################################################
+
+#---------------------------        INCLUDE       -----------------------------#
+
+#---------------------------     DEBUG OPTIONS    -----------------------------#
+# uncomment line(s) to activate debug function
+# set -x    # print a trace of simple commands and their arguments
+# set -v    # print shell input lines as they are read
+# set -n    # read commands but do not execute them
+
+#---------------------------   GLOBAL VARIABLES   -----------------------------#
+myName=$(basename $0)
+osName=$(uname -s)
+myVersion=$(sed 's/^# @version //;s/ *#$//' ${myName})
+
+#---------------------------       FUNCTIONS      -----------------------------#
+
+#------------------------------------------------------------------------------#
+# @function    usage                                                           #
+# @description Displays usage of this script and help messages and exit script.#
+#                                                                              #
+# @usage       usage                                                           #
+# @in          none                                                            #
+# @return      none                                                            #
+# @return-code                                                                 #
+#              none                                                            #
+# @exit-code                                                                   #
+#              255 - normal exit code                                          #
+#------------------------------------------------------------------------------#
+usage()
+{
+   cat << _EOF_
+
+${myName} version ${myVersion}
+
+   Purpose
+   =======
+   Creates an installable image of VIOS root volume group onto a filesystem.
+   It can also backup virtual and logical configuration of VIOS to padmin's home
+   directory using viosbr command.
+
+   Syntax
+   ======
+   ${myName} --mksysb --file <file> [--nomedialib]
+   ${myName} --nim --dir <directory> [--nomedialib]
+   ${myName} --config [--file <file>]
+   ${myName} [-h | --help]
+         
+   Flags
+   =====
+   --mksysb     Creates a mksysb image to a file specified by --file flag that
+                can be installed using HMC or NIM.
+
+   --nim        Backup VIO Server system to a remote filesystem by creating a
+                nim_resources.tar file in directory specified by --dir flag.
+                This file contains all necessary resources to restore VIOS using
+                NIM or installios command on HMC.
+
+   --config     Creates a backup file with viobr command that contains all
+                virtual and logical configuration from VIOS.
+
+   --file       File name to place VIOS mksysb backup.
+   --dir        Directory name to place nim_resources.tar file.
+   --nomedialib Does not backup VIOS virtual media library.
+
+_EOF_
+   exit 255
+}
+
+#------------------------------------------------------------------------------#
+# @function    parse                                                           #
+# @description Parses provided arguments.                                      #
+#                                                                              #
+# @usage       parse <arguments>                                               #
+# @in          All arguments provided from command line for execution.         #
+# @return      none                                                            #
+# @return-code                                                                 #
+#              none                                                            #
+# @exit-code                                                                   #
+#              none                                                            #
+#------------------------------------------------------------------------------#
+parse()
+{
+   local inArg
+   for inArg in $*
+   do
+      case ${inArg} in
+         '--mksysb')
+	    [ -z ${backupType} ] && backupType="mksysb"
+	    ;;
+         '--nim')
+	    ;;
+         '--nomedialib')
+	    ;;
+         '--viobr')
+	    ;;
+         '--help'|'-h')
+	    usage
+	    ;;
+      esac
+   done
+}
+#---------------------------     MAIN SECTION     -----------------------------#
+parse $*
+
+exit 0
