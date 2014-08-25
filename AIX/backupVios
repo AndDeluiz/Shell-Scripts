@@ -7,7 +7,7 @@
 # @description Creates an installable image of VIOS root volume group onto a   #
 #              filesystem. It can also backup virtual and logical configuration#
 #              of VIOS to disk using viobr command.                            #
-# @usage                                                                       #
+# @usage       backupVios --help                                               #
 ################################################################################
 
 #---------------------------        INCLUDE       -----------------------------#
@@ -21,7 +21,15 @@
 #---------------------------   GLOBAL VARIABLES   -----------------------------#
 myName=$(basename $0)
 osName=$(uname -s)
-myVersion=$(sed 's/^# @version //;s/ *#$//' ${myName})
+myVersion=$(sed -n '/^# @version/{s/^# @version *//;s/[:blank:]*#$//p}' ${myName})
+
+myLogDir=/var/adm/ras/${myName%.*}
+myLogFile=${myLogDir}/${myName%.*}-$(date "+%Y%M%d-%H%M%S").log
+
+# VIOS Command Line Interface
+cmdIOSCLI=/usr/ios/cli/ioscli
+
+declare noMediaLib backupType backupFile nimBkupDir
 
 #---------------------------       FUNCTIONS      -----------------------------#
 
@@ -51,27 +59,33 @@ ${myName} version ${myVersion}
 
    Syntax
    ======
-   ${myName} --mksysb --file <file> [--nomedialib]
-   ${myName} --nim --dir <directory> [--nomedialib]
-   ${myName} --config [--file <file>]
+   ${myName} --mksysb --file <file> [--nomedialib] [-- <additional flags>]
+   ${myName} --nim --dir <directory> [--nomedialib] [-- <additional flags>]
+   ${myName} --config [--file <file>] [-- <additional flags>]
    ${myName} [-h | --help]
          
    Flags
    =====
    --mksysb     Creates a mksysb image to a file specified by --file flag that
-                can be installed using HMC or NIM.
+                can be installed using HMC or NIM (uses backupios command)
 
    --nim        Backup VIO Server system to a remote filesystem by creating a
                 nim_resources.tar file in directory specified by --dir flag.
                 This file contains all necessary resources to restore VIOS using
-                NIM or installios command on HMC.
+                NIM or installios command on HMC (uses backupios command).
 
    --config     Creates a backup file with viobr command that contains all
                 virtual and logical configuration from VIOS.
 
-   --file       File name to place VIOS mksysb backup.
-   --dir        Directory name to place nim_resources.tar file.
+   --file       Specify file name to place VIOS mksysb backup.
+
+   --dir        Specify directory name to place nim_resources.tar file.
+
    --nomedialib Does not backup VIOS virtual media library.
+
+   --           Specify additional flags to be passed directely to backupios
+                or viobr commands. Must be placed at the end of the line for
+		correct parsing.
 
 _EOF_
    exit 255
@@ -91,26 +105,116 @@ _EOF_
 #------------------------------------------------------------------------------#
 parse()
 {
-   local inArg
-   for inArg in $*
+   while [ $# -ne 0 ]
    do
-      case ${inArg} in
+      case $1 in
          '--mksysb')
-	    [ -z ${backupType} ] && backupType="mksysb"
+	    if [ -z ${backupType} ]
+            then
+               backupType="mksysb"
+	    else
+	       usage
+	    fi
 	    ;;
          '--nim')
+	    if [ -z ${backupType} ]
+            then
+               backupType="nim"
+	    else
+	       usage
+	    fi
+	    ;;
+         '--config')
+	    if [ -z ${backupType} ]
+            then
+               backupType="config"
+	    else
+	       usage
+	    fi
+	    ;;
+         '--file')
+	    shift
+	    backupFile="$1"
+	    ;;
+         '--dir')
+	    shift
+	    nimBkupDir="$1"
 	    ;;
          '--nomedialib')
+	    noMediaLib=1
 	    ;;
-         '--viobr')
+	 '--')
+	    shift
+	    additionalArgs="$*"
+	    return 0
 	    ;;
          '--help'|'-h')
 	    usage
 	    ;;
       esac
+      shift
+      argCount=$((argCount + 1))
    done
+   return 0
 }
+
 #---------------------------     MAIN SECTION     -----------------------------#
+
+# Parse provided arguments
 parse $*
+
+# Redirects stdout and stderr to log file
+#exec > ${myLogFile} 2>&1
+
+# Check if running as root
+if [ $(id -un) != "root" ]
+then
+   echo "ERROR: Command must be run as root user"
+   exit 127
+fi
+
+# Check for ioscli command availability
+if [ ! -x ${cmdIOSCLI}  ]
+then
+   echo "ERROR: ${cmdIOSCLI} command is not available in this system"
+   exit 126
+fi
+
+# Assembly command line for backup execution
+case ${backupType} in
+   'mksysb')
+      cmdToExec="${cmdIOSCLI} backupios -mksysb"
+      if [ ! -z ${backupFile}  ]
+      then
+         cmdToExec="${cmdToExec} -file '${backupFile}' ${additionalArgs}"
+      else
+         echo "ERROR: No destination file specified with --file option."
+	 exit 125
+      fi
+      ;;
+   'nim')
+      cmdToExec="${cmdIOSCLI} backupios"
+      if [ -w ${nimBkupDir}  ]
+      then
+         cmdToExec="${cmdToExec} -file '${nimBkupDir}' ${additionalArgs}"
+      else
+         echo "ERROR: ${nimBkupDir} is not writable or does not exist."
+	 exit 124
+      fi
+      ;;
+   'config')
+      cmdToExec="${cmdIOSCLI} viobr -backup"
+      if [ ! -z ${backupFile}  ]
+      then
+         cmdToExec="${cmdToExec} -file '${backupFile}' ${additionalArgs}"
+      else
+         echo "ERROR: No destination file specified with --file option."
+	 exit 125
+      fi
+      ;;
+esac
+
+# Execute backup command
+echo "${cmdToExec}"
 
 exit 0
