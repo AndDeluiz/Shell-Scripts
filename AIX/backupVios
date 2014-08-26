@@ -22,14 +22,26 @@
 myName=$(basename $0)
 osName=$(uname -s)
 myVersion=$(sed -n '/^# @version/{s/^# @version *//;s/[:blank:]*#$//p}' ${myName})
+myHostname=$(hostname)
 
+# Logfile definitions
 myLogDir=/var/adm/ras/${myName%.*}
 myLogFile=${myLogDir}/${myName%.*}-$(date "+%Y%M%d-%H%M%S").log
+myLogFilePattern="${myLogDir}/${myName%.*}*.log"
 
 # VIOS Command Line Interface
 cmdIOSCLI=/usr/ios/cli/ioscli
 
-declare noMediaLib backupType backupFile nimBkupDir
+# E-mail definitions
+doNotSendMail=0
+cmdMailx=/usr/bin/mailx
+mailSubject="[${myName}] Log de execucao $(date "+%d/%M/%Y")"
+
+# Null global variables
+noMediaLib=
+backupType=
+backupFile=
+nimBkupDir=
 
 #---------------------------       FUNCTIONS      -----------------------------#
 
@@ -59,9 +71,9 @@ ${myName} version ${myVersion}
 
    Syntax
    ======
-   ${myName} --mksysb --file <file> [--nomedialib] [-- <additional flags>]
-   ${myName} --nim --dir <directory> [--nomedialib] [-- <additional flags>]
-   ${myName} --config [--file <file>] [-- <additional flags>]
+   ${myName} --mksysb --file <file> [--nomedialib] [--nomail] [-- <additional flags>]
+   ${myName} --nim --dir <directory> [--nomedialib] [--nomail] [-- <additional flags>]
+   ${myName} --config [--file <file>] [--nomail] [-- <additional flags>]
    ${myName} [-h | --help]
          
    Flags
@@ -82,6 +94,10 @@ ${myName} version ${myVersion}
    --dir        Specify directory name to place nim_resources.tar file.
 
    --nomedialib Does not backup VIOS virtual media library.
+
+   --nomail     Does not send an email to support team as defined in
+                supportMailAddress internal variable.
+                Default: 
 
    --           Specify additional flags to be passed directely to backupios
                 or viobr commands. Must be placed at the end of the line for
@@ -143,6 +159,9 @@ parse()
          '--nomedialib')
 	    noMediaLib=1
 	    ;;
+         '--nomail')
+	    doNotSendMail=1
+	    ;;
 	 '--')
 	    shift
 	    additionalArgs="$*"
@@ -158,12 +177,68 @@ parse()
    return 0
 }
 
+#------------------------------------------------------------------------------#
+# @function    cleanOldLogs                                                    #
+# @description Clean old log files.                                            #
+#                                                                              #
+# @usage       cleanOldLogs <logfile_pattern> <files_to_keep>                  #
+# @in          logfile_pattern - Pattern for logfiles matching                 #
+#              files_to_keep - Number of files to keep in disk                 #
+# @out         Names of removed files                                          #
+# @return-code                                                                 #
+#              none                                                            #
+# @exit-code                                                                   #
+#              none                                                            #
+#------------------------------------------------------------------------------#
+cleanOldLogs()
+{
+   logFilePattern=$1
+   numOfFilesToKeep=$2
+
+   # Define file list array
+   set -a logFileArray $(ls -t ${logFilePattern})
+
+   logFileArraySize=${#logFileArray[@]}
+   if [ ${logFileArraySize} -gt ${numOfFilesToKeep} ]
+   then
+      while [ ${logFileArraySize} -ne ${numOfFilesToKeep} ]
+      do
+         echo "cleanOldLogs(): removing ${logFileArray[${logFileArraySize}-1]} \c"
+         rm -f ${logFileArray[${logFileArraySize}-1]} 2> /dev/null && echo "[OK]" || echo "[FAIL]"
+	 logFileArraySize=$((logFileArraySize - 1))
+      done
+   fi
+
+   unset logFilePattern numOfFilesToKeep logFile logFileArray logFileArraySize
+
+}
+
+#------------------------------------------------------------------------------#
+# @function    sendLogByMail                                                   #
+# @description Send input logfile by email to                                  #
+#                                                                              #
+# @usage       sendLogByMail <logfile> <@address>                              #
+# @in          logfile - Log file to send by email                             #
+#              @address - recipient(s) e-mail address. If more than one speci- #
+#                         fied, must be separated by commas(,).                #
+# @return      none                                                            #
+# @return-code 0 - successful                                                  #
+#              1 - unsuccessful                                                #
+# @exit-code                                                                   #
+#              none                                                            #
+#------------------------------------------------------------------------------#
+sendLogByMail()
+{
+   ${cmdMailx} -s "${mailSubject}" $2 < $1 && return 0 || return 1
+}
+
 #---------------------------     MAIN SECTION     -----------------------------#
 
 # Parse provided arguments
 parse $*
 
 # Redirects stdout and stderr to log file
+#[ ! -d ${myLogDir} ] && mkdir -p ${myLogDir}
 #exec > ${myLogFile} 2>&1
 
 # Check if running as root
@@ -172,6 +247,8 @@ then
    echo "ERROR: Command must be run as root user"
    exit 127
 fi
+
+cleanOldLogs ${myLogFilePattern} ${numOfLogFiles}
 
 # Check for ioscli command availability
 if [ ! -x ${cmdIOSCLI}  ]
@@ -182,25 +259,29 @@ fi
 
 # Assembly command line for backup execution
 case ${backupType} in
-   'mksysb')
-      cmdToExec="${cmdIOSCLI} backupios -mksysb"
-      if [ ! -z ${backupFile}  ]
-      then
-         cmdToExec="${cmdToExec} -file '${backupFile}' ${additionalArgs}"
-      else
-         echo "ERROR: No destination file specified with --file option."
-	 exit 125
-      fi
-      ;;
-   'nim')
+   'mksysb'|'nim')
       cmdToExec="${cmdIOSCLI} backupios"
-      if [ -w ${nimBkupDir}  ]
-      then
-         cmdToExec="${cmdToExec} -file '${nimBkupDir}' ${additionalArgs}"
-      else
-         echo "ERROR: ${nimBkupDir} is not writable or does not exist."
-	 exit 124
-      fi
+      case ${backupType} in
+         'mksysb')
+            cmdToExec="${cmdToExec} -mksysb"
+            if [ ! -z ${backupFile}  ]
+            then
+               cmdToExec="${cmdToExec} -file '${backupFile}' ${additionalArgs}"
+            else
+               echo "ERROR: No destination file specified with --file option."
+	       exit 125
+            fi
+            ;;
+         'nim')
+            if [ -w ${nimBkupDir}  ]
+            then
+               cmdToExec="${cmdToExec} -file '${nimBkupDir}' ${additionalArgs}"
+            else
+               echo "ERROR: ${nimBkupDir} is not writable or does not exist."
+               exit 124
+            fi
+            ;;
+      esac
       ;;
    'config')
       cmdToExec="${cmdIOSCLI} viobr -backup"
@@ -216,5 +297,11 @@ esac
 
 # Execute backup command
 echo "${cmdToExec}"
+
+if [ ${doNotSendMail} -eq 0 ]
+then
+   echo "INFO: Sending execution log by mail \c"
+   sendLogByMail && echo "[OK]" && echo "[FAIL]"
+fi
 
 exit 0
