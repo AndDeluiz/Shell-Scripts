@@ -261,6 +261,7 @@ fi
 case ${backupType} in
    'mksysb'|'nim')
       cmdToExec="${cmdIOSCLI} backupios"
+      [ ${noMediaLib} -eq 1 ] && cmdToExec="${cmdIOSCLI} -nomedialib"
       case ${backupType} in
          'mksysb')
             cmdToExec="${cmdToExec} -mksysb"
