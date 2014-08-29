@@ -1,8 +1,8 @@
-#!/usr/bin/ksh
+#!/usr/bin/ksh93
 ################################################################################
-# @author      Anderson Deluiz (Twitter: @AndDeluiz)                           #
+# @author      Anderson Deluiz - anderson.santos@gpnet.com.br                  #
 # @name        backupVios                                                      #
-# @version     0.9                                                             #
+# @version     1.0                                                             #
 # @date        Aug 22, 2014                                                    #
 # @description Creates an installable image of VIOS root volume group onto a   #
 #              filesystem. It can also backup virtual and logical configuration#
@@ -21,24 +21,30 @@
 #---------------------------   GLOBAL VARIABLES   -----------------------------#
 myName=$(basename $0)
 osName=$(uname -s)
-myVersion=$(sed -n '/^# @version/{s/^# @version *//;s/[:blank:]*#$//p}' ${myName})
+myVersion=$(sed -ne '/^# @version/{s/^# @version *//;s/[:blank:]*#$//p}' ${myName})
 myHostname=$(hostname)
 
 # Logfile definitions
-myLogDir=/var/adm/ras/${myName%.*}
+myLogDir=/home/padmin/log/${myName%.*}
 myLogFile=${myLogDir}/${myName%.*}-$(date "+%Y%M%d-%H%M%S").log
 myLogFilePattern="${myLogDir}/${myName%.*}*.log"
+numOfLogFiles=12
 
 # VIOS Command Line Interface
 cmdIOSCLI=/usr/ios/cli/ioscli
 
 # E-mail definitions
 doNotSendMail=0
-cmdMailx=/usr/bin/mailx
-mailSubject="[${myName}] Log de execucao $(date "+%d/%M/%Y")"
+#cmdMail=/usr/bin/mailx
+cmdMail=/usr/bin/telnet
+smtpFromAddress="System Administrator <${LOGNAME}@${myHostname}"
+smtpRcptAddress=
+smtpMailServer=
+smtpServerPort=25
+smtpMailSubject="[${myName}] ${myHostname} - Log de execucao $(date "+%d/%M/%Y")"
 
 # Null global variables
-noMediaLib=
+noMediaLib=0
 backupType=
 backupFile=
 nimBkupDir=
@@ -75,7 +81,7 @@ ${myName} version ${myVersion}
    ${myName} --nim --dir <directory> [--nomedialib] [--nomail] [-- <additional flags>]
    ${myName} --config [--file <file>] [--nomail] [-- <additional flags>]
    ${myName} [-h | --help]
-         
+
    Flags
    =====
    --mksysb     Creates a mksysb image to a file specified by --file flag that
@@ -97,11 +103,11 @@ ${myName} version ${myVersion}
 
    --nomail     Does not send an email to support team as defined in
                 supportMailAddress internal variable.
-                Default: 
+                Default:
 
    --           Specify additional flags to be passed directely to backupios
                 or viobr commands. Must be placed at the end of the line for
-		correct parsing.
+                correct parsing.
 
 _EOF_
    exit 255
@@ -125,54 +131,53 @@ parse()
    do
       case $1 in
          '--mksysb')
-	    if [ -z ${backupType} ]
+            if [ -z "${backupType}" ]
             then
                backupType="mksysb"
-	    else
-	       usage
-	    fi
-	    ;;
+            else
+               usage
+            fi
+            ;;
          '--nim')
-	    if [ -z ${backupType} ]
+            if [ -z "${backupType}" ]
             then
                backupType="nim"
-	    else
-	       usage
-	    fi
-	    ;;
+            else
+               usage
+            fi
+            ;;
          '--config')
-	    if [ -z ${backupType} ]
+            if [ -z "${backupType}" ]
             then
                backupType="config"
-	    else
-	       usage
-	    fi
-	    ;;
+            else
+               usage
+            fi
+            ;;
          '--file')
-	    shift
-	    backupFile="$1"
-	    ;;
+            shift
+            backupFile="$1"
+            ;;
          '--dir')
-	    shift
-	    nimBkupDir="$1"
-	    ;;
+            shift
+            nimBkupDir="$1"
+            ;;
          '--nomedialib')
-	    noMediaLib=1
-	    ;;
+            noMediaLib=1
+            ;;
          '--nomail')
-	    doNotSendMail=1
-	    ;;
-	 '--')
-	    shift
-	    additionalArgs="$*"
-	    return 0
-	    ;;
+            doNotSendMail=1
+            ;;
+         '--')
+            shift
+            additionalArgs="$*"
+            return 0
+            ;;
          '--help'|'-h')
-	    usage
-	    ;;
+            usage
+            ;;
       esac
       shift
-      argCount=$((argCount + 1))
    done
    return 0
 }
@@ -196,7 +201,7 @@ cleanOldLogs()
    numOfFilesToKeep=$2
 
    # Define file list array
-   set -a logFileArray $(ls -t ${logFilePattern})
+   set -A logFileArray $(ls -t ${logFilePattern} 2> /dev/null)
 
    logFileArraySize=${#logFileArray[@]}
    if [ ${logFileArraySize} -gt ${numOfFilesToKeep} ]
@@ -205,7 +210,7 @@ cleanOldLogs()
       do
          echo "cleanOldLogs(): removing ${logFileArray[${logFileArraySize}-1]} \c"
          rm -f ${logFileArray[${logFileArraySize}-1]} 2> /dev/null && echo "[OK]" || echo "[FAIL]"
-	 logFileArraySize=$((logFileArraySize - 1))
+         logFileArraySize=$((logFileArraySize - 1))
       done
    fi
 
@@ -229,7 +234,18 @@ cleanOldLogs()
 #------------------------------------------------------------------------------#
 sendLogByMail()
 {
-   ${cmdMailx} -s "${mailSubject}" $2 < $1 && return 0 || return 1
+   #${cmdMail} -s "${mailSubject}" $2 < $1 && return 0 || return 1
+   ${cmdMail} ${smtpMailServer} ${smtpServerPort} << _EOF_ && return 0 || return 1
+HELO ${myHostname}
+MAIL FROM:${LOGNAME}@${myHostname}
+RCPT TO:$2
+DATA
+SUBJECT: ${smtpMailSubject}
+$(cat $1)
+.
+QUIT
+_EOF_
+
 }
 
 #---------------------------     MAIN SECTION     -----------------------------#
@@ -239,7 +255,7 @@ parse $*
 
 # Redirects stdout and stderr to log file
 #[ ! -d ${myLogDir} ] && mkdir -p ${myLogDir}
-#exec > ${myLogFile} 2>&1
+exec > ${myLogFile} 2>&1
 
 # Check if running as root
 if [ $(id -un) != "root" ]
@@ -248,7 +264,7 @@ then
    exit 127
 fi
 
-cleanOldLogs ${myLogFilePattern} ${numOfLogFiles}
+cleanOldLogs "${myLogFilePattern}" ${numOfLogFiles}
 
 # Check for ioscli command availability
 if [ ! -x ${cmdIOSCLI}  ]
@@ -261,7 +277,7 @@ fi
 case ${backupType} in
    'mksysb'|'nim')
       cmdToExec="${cmdIOSCLI} backupios"
-      [ ${noMediaLib} -eq 1 ] && cmdToExec="${cmdIOSCLI} -nomedialib"
+      [ ${noMediaLib} -eq 1 ] && cmdToExec="${cmdToExec} -nomedialib"
       case ${backupType} in
          'mksysb')
             cmdToExec="${cmdToExec} -mksysb"
@@ -270,7 +286,7 @@ case ${backupType} in
                cmdToExec="${cmdToExec} -file '${backupFile}' ${additionalArgs}"
             else
                echo "ERROR: No destination file specified with --file option."
-	       exit 125
+               exit 125
             fi
             ;;
          'nim')
@@ -291,7 +307,7 @@ case ${backupType} in
          cmdToExec="${cmdToExec} -file '${backupFile}' ${additionalArgs}"
       else
          echo "ERROR: No destination file specified with --file option."
-	 exit 125
+         exit 125
       fi
       ;;
 esac
@@ -302,7 +318,7 @@ echo "${cmdToExec}"
 if [ ${doNotSendMail} -eq 0 ]
 then
    echo "INFO: Sending execution log by mail \c"
-   sendLogByMail && echo "[OK]" && echo "[FAIL]"
+   sendLogByMail ${myLogFile} ${smtpRcptAddress} && echo "[OK]" && echo "[FAIL]"
 fi
 
 exit 0
