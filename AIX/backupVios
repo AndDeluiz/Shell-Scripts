@@ -21,7 +21,7 @@
 #---------------------------   GLOBAL VARIABLES   -----------------------------#
 myName=$(basename $0)
 osName=$(uname -s)
-myVersion=$(sed -ne '/^# @version/{s/^# @version *//;s/[:blank:]*#$//p}' ${myName})
+myVersion=$(awk '/^# @version/ {print $3}' ${myName})
 myHostname=$(hostname)
 
 # Logfile definitions
