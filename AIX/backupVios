@@ -38,8 +38,8 @@ doNotSendMail=0
 #cmdMail=/usr/bin/mailx
 cmdMail=/usr/bin/telnet
 smtpFromAddress="System Administrator <${LOGNAME}@${myHostname}"
-smtpRcptAddress="tsseope@jfrj.jus.br"
-smtpMailServer=10.10.1.150
+smtpRcptAddress="mail@domain.com"
+smtpMailServer=
 smtpServerPort=25
 smtpMailSubject="[${myName}] ${myHostname} - Log de execucao $(date "+%d/%m/%Y")"
 
