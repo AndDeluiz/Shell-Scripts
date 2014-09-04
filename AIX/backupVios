@@ -1,9 +1,9 @@
 #!/usr/bin/ksh93
 ################################################################################
-# @author      Anderson Deluiz (Twitter: @anddeluiz)                           #
+# @author      Anderson Deluiz (Twitter: @AndDeluiz)                           #
 # @name        backupVios                                                      #
 # @version     1.0                                                             #
-# @date        Aug 22, 2014                                                    #
+# @date        Sep 04, 2014                                                    #
 # @description Creates an installable image of VIOS root volume group onto a   #
 #              filesystem. It can also backup virtual and logical configuration#
 #              of VIOS to disk using viobr command.                            #
@@ -26,7 +26,7 @@ myHostname=$(hostname)
 
 # Logfile definitions
 myLogDir=/home/padmin/log/${myName%.*}
-myLogFile=${myLogDir}/${myName%.*}-$(date "+%Y%M%d-%H%M%S").log
+myLogFile=${myLogDir}/${myName%.*}-$(date "+%Y%m%d-%H%M%S").log
 myLogFilePattern="${myLogDir}/${myName%.*}*.log"
 numOfLogFiles=12
 
@@ -38,10 +38,10 @@ doNotSendMail=0
 #cmdMail=/usr/bin/mailx
 cmdMail=/usr/bin/telnet
 smtpFromAddress="System Administrator <${LOGNAME}@${myHostname}"
-smtpRcptAddress=
-smtpMailServer=
+smtpRcptAddress="tsseope@jfrj.jus.br"
+smtpMailServer=10.10.1.150
 smtpServerPort=25
-smtpMailSubject="[${myName}] ${myHostname} - Log de execucao $(date "+%d/%M/%Y")"
+smtpMailSubject="[${myName}] ${myHostname} - Log de execucao $(date "+%d/%m/%Y")"
 
 # Null global variables
 noMediaLib=0
@@ -103,7 +103,7 @@ ${myName} version ${myVersion}
 
    --nomail     Does not send an email to support team as defined in
                 supportMailAddress internal variable.
-                Default:
+                Default: $(echo "${smtpRcptAddress}\c")
 
    --           Specify additional flags to be passed directely to backupios
                 or viobr commands. Must be placed at the end of the line for
@@ -171,14 +171,26 @@ parse()
          '--')
             shift
             additionalArgs="$*"
-            return 0
             ;;
          '--help'|'-h')
+            usage
+            ;;
+         *)
             usage
             ;;
       esac
       shift
    done
+
+   case ${backupType} in
+      "mksysb"|"config")
+         [ -z "${backupFile}" ] && usage
+         ;;
+      "nim")
+         [ -z "${nimBkupDir}" ] && usage
+         ;;
+   esac
+
    return 0
 }
 
@@ -283,20 +295,20 @@ case ${backupType} in
             cmdToExec="${cmdToExec} -mksysb"
             if [ ! -z ${backupFile}  ]
             then
-               cmdToExec="${cmdToExec} -file '${backupFile}' ${additionalArgs}"
+               cmdToExec="${cmdToExec} -file ${backupFile} ${additionalArgs}"
             else
                echo "ERROR: No destination file specified with --file option."
                exit 125
             fi
             ;;
          'nim')
-            if [ -w ${nimBkupDir}  ]
-            then
-               cmdToExec="${cmdToExec} -file '${nimBkupDir}' ${additionalArgs}"
-            else
-               echo "ERROR: ${nimBkupDir} is not writable or does not exist."
-               exit 124
-            fi
+            #if [ -w ${nimBkupDir}  ]
+            #then
+               cmdToExec="${cmdToExec} -file ${nimBkupDir} ${additionalArgs}"
+            #else
+            #   echo "ERROR: ${nimBkupDir} is not writable or does not exist."
+            #   exit 124
+            #fi
             ;;
       esac
       ;;
@@ -313,7 +325,10 @@ case ${backupType} in
 esac
 
 # Execute backup command
-echo "${cmdToExec}"
+echo "INFO: $(date) - Starting backup execution ..."
+echo "INFO: Command: ${cmdToExec}"
+${cmdToExec}
+echo "INFO: $(date) - End backup"
 
 if [ ${doNotSendMail} -eq 0 ]
 then
