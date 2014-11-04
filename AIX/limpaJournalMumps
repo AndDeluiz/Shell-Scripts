@@ -1,0 +1,122 @@
+#!/usr/bin/ksh
+################################################################################
+# @author      Anderson Deluiz (Twitter: @AndDeluiz)                           #
+# @name        limpaJournalMumps                                               #
+# @version     1.0                                                             #
+# @date        Oct 31, 2014                                                    #
+# @description Limpa arquivo de journaling do Mumps e reinicia o sistema.      #
+#                                                                              #
+# @usage       limpaJournalMumps                                               #
+################################################################################
+
+#---------------------------        INCLUDE       -----------------------------#
+
+#---------------------------     DEBUG OPTIONS    -----------------------------#
+# uncomment line(s) to activate debug function
+# set -x    # print a trace of simple commands and their arguments
+# set -v    # print shell input lines as they are read
+# set -n    # read commands but do not execute them
+
+#---------------------------   GLOBAL VARIABLES   -----------------------------#
+myName=$(basename $0)
+osName=$(uname -s)
+myVersion=$(awk '/^# @version/ {print $3}' ${myName})
+myHostname=$(hostname)
+
+# Logfile definitions
+myLogDir=log/${myName%.*}
+myLogFile=${myLogDir}/${myName%.*}-$(date "+%Y%m%d-%H%M%S").log
+myLogFilePattern="${myLogDir}/${myName%.*}*.log"
+numOfLogFiles=12
+
+# E-mail definitions
+doNotSendMail=0
+#cmdMail=/usr/bin/mailx
+cmdMail=/usr/bin/telnet
+smtpFromAddress="System Administrator <${LOGNAME}@${myHostname}"
+
+#---------------------------       FUNCTIONS      -----------------------------#
+
+#------------------------------------------------------------------------------#
+# @function    usage                                                           #
+# @description Displays usage of this script and help messages and exit script.#
+#                                                                              #
+# @usage       usage                                                           #
+# @in          none                                                            #
+# @return      none                                                            #
+# @return-code                                                                 #
+#              none                                                            #
+# @exit-code                                                                   #
+#              255 - normal exit code                                          #
+#------------------------------------------------------------------------------#
+usage()
+{
+   cat << _EOF_
+
+${myName} version ${myVersion}
+
+   Purpose
+   =======
+   Limpa arquivo de journaling do Mumps e reinicia o sistema Mumps.
+
+   Syntax
+   ======
+   ${myName} [-h | --help]
+
+_EOF_
+   exit 255
+}
+
+#------------------------------------------------------------------------------#
+# @function    parse                                                           #
+# @description Parses provided arguments.                                      #
+#                                                                              #
+# @usage       parse <arguments>                                               #
+# @in          All arguments provided from command line for execution.         #
+# @return      none                                                            #
+# @return-code                                                                 #
+#              none                                                            #
+# @exit-code                                                                   #
+#              none                                                            #
+#------------------------------------------------------------------------------#
+parse()
+{
+   while [ $# -ne 0 ]
+   do
+      case $1 in
+         '--help'|'-h')
+            usage
+            ;;
+         *)
+            usage
+            ;;
+      esac
+   done
+
+   return 0
+}  
+
+#------------------------------------------------------------------------------#
+# @function    mumpsStop                                                       #
+# @description Stop Open M(umps)                                               #
+#              Codigo extraido do script mstop, parte do produto Open M.       #
+#                                                                              #
+# @usage       mumpsStop                                                       #
+# @in          none                                                            #
+# @return      none                                                            #
+# @return-code                                                                 #
+#              none                                                            #
+# @exit-code                                                                   #
+#              none                                                            #
+#------------------------------------------------------------------------------#
+mumpsStop()
+{
+   if [ ! "$(ps -ef | awk '/[ \t]m(sqlm|ux)([ \t]|$)/ {print}')" ]
+   then
+      echo "INFO: Open M [ISM] Not Up!"
+   else
+      muxs -B "^SHUTDOWN"
+   fi
+}  
+#---------------------------     MAIN SECTION     -----------------------------#
+exit 0
