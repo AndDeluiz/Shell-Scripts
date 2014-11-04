@@ -1,9 +1,9 @@
 #!/usr/bin/ksh93
 ################################################################################
-# @author      Anderson Deluiz (Twitter: @AndDeluiz)                           #
+# @author      Anderson Deluiz - twitter: @anddeluiz                           #
 # @name        backupVios                                                      #
 # @version     1.0                                                             #
-# @date        Sep 04, 2014                                                    #
+# @date        Aug 22, 2014                                                    #
 # @description Creates an installable image of VIOS root volume group onto a   #
 #              filesystem. It can also backup virtual and logical configuration#
 #              of VIOS to disk using viobr command.                            #
@@ -35,12 +35,8 @@ cmdIOSCLI=/usr/ios/cli/ioscli
 
 # E-mail definitions
 doNotSendMail=0
-#cmdMail=/usr/bin/mailx
-cmdMail=/usr/bin/telnet
-smtpFromAddress="System Administrator <${LOGNAME}@${myHostname}"
-smtpRcptAddress="mail@domain.com"
-smtpMailServer=
-smtpServerPort=25
+cmdMail=/usr/bin/mailx
+smtpRcptAddress="address@domain"
 smtpMailSubject="[${myName}] ${myHostname} - Log de execucao $(date "+%d/%m/%Y")"
 
 # Null global variables
@@ -246,18 +242,7 @@ cleanOldLogs()
 #------------------------------------------------------------------------------#
 sendLogByMail()
 {
-   #${cmdMail} -s "${mailSubject}" $2 < $1 && return 0 || return 1
-   ${cmdMail} ${smtpMailServer} ${smtpServerPort} << _EOF_ && return 0 || return 1
-HELO ${myHostname}
-MAIL FROM:${LOGNAME}@${myHostname}
-RCPT TO:$2
-DATA
-SUBJECT: ${smtpMailSubject}
-$(cat $1)
-.
-QUIT
-_EOF_
-
+   ${cmdMail} -s "${mailSubject}" $2 < $1 && return 0 || return 1
 }
 
 #---------------------------     MAIN SECTION     -----------------------------#
@@ -316,7 +301,7 @@ case ${backupType} in
       cmdToExec="${cmdIOSCLI} viobr -backup"
       if [ ! -z ${backupFile}  ]
       then
-         cmdToExec="${cmdToExec} -file '${backupFile}' ${additionalArgs}"
+         cmdToExec="${cmdToExec} -file ${backupFile} ${additionalArgs}"
       else
          echo "ERROR: No destination file specified with --file option."
          exit 125
@@ -332,8 +317,8 @@ echo "INFO: $(date) - End backup"
 
 if [ ${doNotSendMail} -eq 0 ]
 then
-   echo "INFO: Sending execution log by mail \c"
-   sendLogByMail ${myLogFile} ${smtpRcptAddress} && echo "[OK]" && echo "[FAIL]"
+   echo "INFO: Sending execution log by mail to ${smtpRcptAddress} \c"
+   sendLogByMail ${myLogFile} ${smtpRcptAddress} && echo "[OK]" || echo "[FAIL]"
 fi
 
 exit 0
