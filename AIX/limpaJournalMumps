@@ -3,7 +3,7 @@
 # @author      Anderson Deluiz (Twitter: @AndDeluiz)                           #
 # @name        limpaJournalMumps                                               #
 # @version     1.0                                                             #
-# @date        Oct 31, 2014                                                    #
+# @date        Nov 24, 2014                                                    #
 # @description Limpa arquivo de journaling do Mumps e reinicia o sistema.      #
 #                                                                              #
 # @usage       limpaJournalMumps                                               #
@@ -30,10 +30,15 @@ myLogFilePattern="${myLogDir}/${myName%.*}*.log"
 numOfLogFiles=12
 
 # E-mail definitions
-doNotSendMail=0
-#cmdMail=/usr/bin/mailx
-cmdMail=/usr/bin/telnet
-smtpFromAddress="System Administrator <${LOGNAME}@${myHostname}"
+cmdMail=/usr/bin/mailx
+mailAddress=
+
+# Open M home directory
+mumpsHomeDir=/home/msql
+
+# Open M start/stop commands
+mumpsStartCmd=${mumpsHomeDir}/mstart
+mumpsStopCmd=${mumpsHomeDir}/mstop
 
 #---------------------------       FUNCTIONS      -----------------------------#
 
@@ -99,24 +104,115 @@ parse()
 #------------------------------------------------------------------------------#
 # @function    mumpsStop                                                       #
 # @description Stop Open M(umps)                                               #
-#              Codigo extraido do script mstop, parte do produto Open M.       #
 #                                                                              #
 # @usage       mumpsStop                                                       #
 # @in          none                                                            #
 # @return      none                                                            #
 # @return-code                                                                 #
-#              none                                                            #
+#              0 - Open M stopped successfully                                 #
+#              1 - Open M isn't running                                        #
+#              2 - Open M didn't stop successfully                             #
 # @exit-code                                                                   #
 #              none                                                            #
 #------------------------------------------------------------------------------#
 mumpsStop()
 {
-   if [ ! "$(ps -ef | awk '/[ \t]m(sqlm|ux)([ \t]|$)/ {print}')" ]
+   if checkMumpsRunning
    then
-      echo "INFO: Open M [ISM] Not Up!"
+      ${mumpsStopCmd} << _EOF_
+No
+No
+Yes
+_EOF_
+
    else
-      muxs -B "^SHUTDOWN"
+      echo "ERROR: Open M is not running! Aborting..."
+      return 1
+   fi
+
+   if ! checkMumpsRunning
+   then
+      echo "INFO: Open M stopped successfully!"
+      return 0
+   else
+      echo "ERROR: Open M didn't stop successfully! Check previous messages for additional information."
+      return 2
    fi
 }  
+
+#------------------------------------------------------------------------------#
+# @function    mumpsStart                                                      #
+# @description Start Open M(umps)                                              #
+#                                                                              #
+# @usage       mumpsStop                                                       #
+# @in          none                                                            #
+# @return      none                                                            #
+# @return-code                                                                 #
+#              0 - Open M started successfully                                 #
+#              1 - Open M already running                                      #
+#              2 - Open M didn't start successfully                            #
+# @exit-code                                                                   #
+#              none                                                            #
+#------------------------------------------------------------------------------#
+mumpsStart()
+{
+   if ! checkMumpsRunning
+   then
+      ${mumpsStartCmd} << _EOF_
+Yes
+No
+ 
+Yes
+Yes
+_EOF_
+
+   else
+      echo "ERROR: Open M is already running! Aborting..."
+      return 1
+   fi
+
+   if checkMumpsRunning
+   then
+      echo "INFO: Open M started successfully! PID = ${mumpsProcess}"
+      return 0
+   else
+      echo "ERROR: Open M didn't start successfully! Check previous messages for additional information."
+      return 2
+   fi
+}  
+
+#------------------------------------------------------------------------------#
+# @function    checkMumpsRunning                                               #
+# @description Check if Open M(umps) is running.                               #
+#              Codigo extraido do script mstop, parte do produto Open M.       #
+#                                                                              #
+# @usage       checkMumpsRunning                                               #
+# @in          none                                                            #
+# @return      none                                                            #
+# @return-code 0 - Open M is running                                           #
+#              1 - Open M is NOT running                                       #
+# @exit-code                                                                   #
+#              none                                                            #
+#------------------------------------------------------------------------------#
+checkMumpsRunning()
+{
+   if [ ! "$(ps -ef | awk '/[ \t]m(sqlm|ux)([ \t]|$)/ {print}')" ]
+   then
+      # Open M isn't running
+      return 1
+   fi
+   mumpsProcess=$(ps -ef | awk '/[ \t]m(sqlm|ux)([ \t]|$)/ {print}')
+   return 0
+}  
+
 #---------------------------     MAIN SECTION     -----------------------------#
-exit 0
+
+# Redirect stdin/stderr to $myLogfile
+exec > ${myLogFile} 2>&1
+
+mumpsStop
+mumpsStart
+ 
+${cmdMail} -s "[${myName}] Log de execucao" ${mailAddress} < ${myLogFile}
+
+exit

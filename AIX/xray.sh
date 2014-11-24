@@ -1,3 +1,4 @@
+#!/bin/ksh
 ########################### 
 # 
 # Script: MENU_SERVICE.sh 
