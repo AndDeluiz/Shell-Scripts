@@ -33,12 +33,11 @@ numOfLogFiles=12
 cmdMail=/usr/bin/mailx
 mailAddress=
 
-# Open M home directory
+# Open M definitions
 mumpsHomeDir=/home/msql
-
-# Open M start/stop commands
 mumpsStartCmd=${mumpsHomeDir}/mstart
 mumpsStopCmd=${mumpsHomeDir}/mstop
+mumpsJournalFile="${mumpsHomeDir}/*.JRN"
 
 #---------------------------       FUNCTIONS      -----------------------------#
 
@@ -119,6 +118,7 @@ mumpsStop()
 {
    if checkMumpsRunning
    then
+      echo "INFO: Parando sistema Open M"
       ${mumpsStopCmd} << _EOF_
 
 No
@@ -127,16 +127,16 @@ Yes
 _EOF_
 
    else
-      echo "ERROR: Open M is not running! Aborting..."
+      echo "ERRO: Open M nao esta em execucao. Abortando..."
       return 1
    fi
 
    if ! checkMumpsRunning
    then
-      echo "INFO: Open M stopped successfully!"
+      echo "INFO: Open M finalizado com sucesso!"
       return 0
    else
-      echo "ERROR: Open M didn't stop successfully! Check previous messages for additional information."
+      echo "ERRO: Open M nao foi finalizado! Verifique mensagens anteriores."
       return 2
    fi
 }  
@@ -159,6 +159,7 @@ mumpsStart()
 {
    if ! checkMumpsRunning
    then
+      echo "INFO: Iniciando sistema Open M"
       ${mumpsStartCmd} << _EOF_
 Yes
 No
@@ -168,16 +169,16 @@ Yes
 _EOF_
 
    else
-      echo "ERROR: Open M is already running! Aborting..."
+      echo "ERRO: Open M ja esta em execucao! Abortando..."
       return 1
    fi
 
    if checkMumpsRunning
    then
-      echo "INFO: Open M started successfully! PID = ${mumpsProcess}"
+      echo "INFO: Open M iniciado com sucesso! PID = ${mumpsProcess}"
       return 0
    else
-      echo "ERROR: Open M didn't start successfully! Check previous messages for additional information."
+      echo "ERRO: Falha ao iniciar Open M! Verifique mensagens anteriores."
       return 2
    fi
 }  
@@ -211,7 +212,20 @@ checkMumpsRunning()
 # Redirect stdin/stderr to $myLogfile
 exec > ${myLogFile} 2>&1
 
-mumpsStop
+if mumpsStop
+then
+   # Remove journal files if mumps stopped successfully
+   echo "INFO: Apagando arquivo(s) de journaling (${mumpsJournalFile})"
+   rm -f ${mumpsJournalFile}
+   if ls ${mumpsJournalFile} > /dev/null 2>&1
+   then
+      echo "INFO: Arquivo(s) apagados com sucesso"
+   else
+      echo "WARN: Ocorreram erros ao apagar arquivo(s) de journaling (${mumpsJournalFile})"
+      echo "WARN: Verifique os arquivos abaixo:"
+      ls -l ${mumpsJournalFile}
+   fi
+fi
 mumpsStart
  
 ${cmdMail} -s "[${myName}] Log de execucao" ${mailAddress} < ${myLogFile}
