@@ -120,6 +120,7 @@ mumpsStop()
    if checkMumpsRunning
    then
       ${mumpsStopCmd} << _EOF_
+
 No
 No
 Yes
