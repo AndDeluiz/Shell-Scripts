@@ -1,0 +1,37 @@
+# Formatting and color definitiioins for xterm/ansi color terminals
+# Adittional info from:
+#   http://www.pixelbeat.org/docs/terminal_colours/#256
+#   http://www.frexx.de/xterm-256-notes/
+_backnone_="\e[00m"
+_backblack_="\e[40m"
+_backblue_="\e[44m"
+_frontred_bold_="\e[01;31m"
+_frontgreen_b="\e[01;32m"
+_frontgrey_b="\e[01;37m"
+_frontgrey="\e[00;37m"
+_frontblue_b="\e[01;34m"
+
+# Load SSH-Agent and Keys
+if $(ps -fu ${USER} | grep 'ssh-agent -s' | grep -v 'grep' > /dev/null 2>&1)
+then
+   echo "Loading SSH Agent and keys: Skipping (already loaded)..."
+else
+   echo -n "Loading SSH Agent and keys: "
+   eval "$(ssh-agent -s)" > /dev/null 2>&1 && echo "OK" || echo "ERROR"
+   echo -n "   Adding GitHub General Key: "
+   ssh-add ~/.ssh/GitHubGeneralKey > /dev/null 2>&1 && echo "OK" || echo "ERROR"
+fi
+
+# Load GPG Agent and Keys
+if $(ps -fu ${USER} | grep 'gpg-agent --daemon' | grep -v grep > /dev/null 2>&1)
+then
+   echo "Loading GPG Agent and keys: Skipping (already loaded)..."
+else
+   echo -n "Loading GPG Agent and keys: "
+   eval $(gpg-agent --daemon --write-env-file "${HOME}/.gnupg/.gpg-agent-info") && echo "OK" || echo "ERROR"
+   if [ -f "${HOME}/.gnupg/.gpg-agent-info" ]
+   then
+      . "${HOME}/.gnupg/.gpg-agent-info"
+      export GPG_AGENT_INFO
+   fi
+fi
