@@ -1,0 +1,515 @@
+#!README
+
+Description: Unix/Linux Checklist
+Program....: checklist-3.2
+Date.......: 20160517
+Author.....: Dana French
+
+This set of scripts provides an automated procedure to perform a
+post-install verification of any Unix system in the data center
+environment. These scripts are written in a "Multi-Shell" configuration,
+meaning they can be executed by several different interpreters,
+including Korn Shell 93, Bash, and Z-Shell.
+
+These scripts are writted to be highly configurable and extensible for
+any Unix and/or Linux operating system, and executable in multiple shell
+script environments.
+
+The list of verification tasks performed by these scripts correspond to
+the checklist spreadsheet that is manually performed currently.  A
+report is generated from the execution of these scripts in CSV (Comma
+Separated Values) format, or in HTML table output.
+
+To use these scripts, they must first be copied to the target system to
+be verified, which can be done as follows:
+
+First SSH to one of the Kickstart Servers: 153.6.60.62 or 10.203.236.1
+
+    # ssh <9id>@<NIMServer> or <KickstartServer>
+    # cd /scripts/checklist-3.2
+
+Next, copy the checklist-3.2 directory to the target system.
+
+    # scp -r /scripts/checklist-3.2  9id@targetSystemHostName:/usr/local/scripts/checklist-3.2
+
+Now logout from the NIM server, and login to the target system.
+
+    # ssh 9id@targetSystemHostName
+    # cd /usr/local/scripts/checklist-3.2
+
+Edit the "runthis.sh" or "runthis.bash" script to contain the RITM,
+username, and location information you want displayed in the checklist
+verification output. Also include the verification group command line
+options if you want to use Verification Groups:
+
+    # vi ./runthis.sh      #### Run this for AIX or Linux systems with Korn Shell 93
+    # vi ./runthis.bash    #### Run this for Linux systems with bash
+
+Execute the verification script to generate CSV or HTML output.
+
+NOTE: It may be necessary to modify the FPATH and CONFDIR variables in
+the script named "checklist.zbksh" to reflect the directory in which
+they exist.
+
+    # ./runthis.sh      #### Run this for AIX or Linux systems with Korn Shell 93
+    # ./runthis.bash    #### Run this for Linux systems with bash
+
+The output from these scripts will be generated in the "/tmp" directory and
+will have a file name of "RITM0000000_hostname_checklist.html"
+
+
+HOW DO I CONFIGURE THE CHECKLIST SCRIPT
+
+The first thing to know about the configuration files associated with
+this shell script, is that all configuration files are also shell
+scripts. So the content of the configuration files must comply with
+shell scripting rules, as the configuration file will be "executed" as a
+"dot" script within the main body of the shell script to define the
+variables and settings contained within the configuration file.
+
+The checklist script allows you to customize and configure it using a
+configuration file. A default configuration file exists in the 
+directory where you copied these programs and is called
+".checklist.conf".
+
+This configuration file allows you to modify the background colors
+associated with the HTML ouput and any other settings you wish to
+include.
+
+The checklist script will first look for a file called ".checklist.conf"
+in your home directory and if it exists, it will use that as the
+configuration file. If it does not exist, it will look for a file called
+".checklist.conf" in the configuration file directory, which is usually
+the same as where you copied the scripts. If it finds a
+".checklist.conf" file in that directory, it will use it.
+
+If it does not find a .checklist.conf configuration file, then it simply
+uses default values for any variables that may have been modified in the
+configuration file.
+
+
+HOW TO MODIFY AND CHANGE THESE SCRIPTS
+
+The verification tasks are divided into two distinct types, the first
+can be performed by capturing the output from a command or series of
+commands. The second requires executing commands, capturing the output,
+and executing additional commands based on the output of the previous
+command. These scripts accommodate both types of verification tasks.
+
+If a verification task can be performed by running a command or series
+of commands, those commands can be defined in a hidden "configuration"
+file which is named beginning with a literal dot "." followed by a task
+name, followed by ".conf".
+
+The commands to be executed are defined as an array element of the
+variable named OSCMD. For example, the command to determine
+the "Uptime" verification task can be defined as:
+
+    OSCMD[AIX]="uptime"
+
+As an example, look at the configuration file named ".uptime.conf":
+
+    # cat .uptime.conf 
+      typeset VERSION="3.2"
+      typeset DESC="Verify Time since last reboot"
+      typeset ANS[0]="Good"
+      typeset ANS[1]="Bad"
+      typeset ANS[2]="N/A"
+      typeset OSNAME="$( uname -s )"
+      typeset RESULT="${ANS[1]}"
+      typeset REMARK="none"
+      typeset RETCODE="99"
+      typeset STATUS="${X}${X}${ANS[2]}"
+      typeset QUOTED="${FALSE}"
+      
+      [[ "_${OSNAME}" == "_AIX"    ]] && OSCMD="uptime | sed -e 's/,/ /g'"
+      [[ "_${OSNAME}" == "_Linux"  ]] && OSCMD="uptime | sed -e 's/,/ /g'"
+      [[ "_${OSNAME}" == "_Cygwin" ]] && OSCMD="uptime | sed -e 's/,/ /g'"
+
+In this example, the AIX command to verify the uptime task, is defined by the
+following configuration file line:
+
+      [[ "_${OSNAME}" == "_AIX"    ]] && OSCMD="uptime | sed -e 's/,/ /g'"
+
+The Linux command to verify the uptime task, is defined by the
+following configuration file line:
+
+      [[ "_${OSNAME}" == "_Linux"  ]] && OSCMD="uptime | sed -e 's/,/ /g'"
+
+In this instance, the verification task command is the same for either
+operating system, however in many instances, this will not be the case.
+And additional operating systems can be included in the "Uptime"
+verification task by adding new OSCMD definitions to the configuration
+file.
+
+If you wish for a command to always return TRUE or FALSE regardless of
+the return code from the actual command execution, then you can define
+an shell variable CONFIG_RETURN and set it to ${TRUE} (0) or ${FALSE}
+(1) or "2". Place this variable at the end of the configuration file, e.g.:
+
+    CONFIG_RETURN="${TRUE}"   #### to always return TRUE
+    CONFIG_RETURN="${FALSE}"  #### to always return FALSE
+    CONFIG_RETURN="2"         #### to always return "2" which is interpreted as N/A
+
+
+WHAT IF THE VERIFICATION TASK IS NOT APPLICABLE TO AN OPERATING SYSTEM?
+
+If a verification task does not apply to a particular operating system,
+then simply include an OSCMD definition line in the configuration file
+with the command defined as "N/A". This will appear in the output as
+"N/A" in the status field.
+
+WHAT IF A NEW VERIFICATION TASK IS REQUIRED THAT IS NOT CURRENTLY DEFINED?
+
+New verification tasks can be added to the checklist script by creating
+a new configuration file for the task, Defining the task name in the
+DESC variable, and defining the command to execute on each operating
+system in the OSCMD variable array. Then modify the "checklist.zbksh"
+script to include the new task by adding a "verifycmd_zbksh" command and
+specify the location of the new configuration file.
+
+Example in "checklist.zbksh":
+
+    verifycmd_zbksh ${VERBSTAT:+ -v} -X "${X}" -b ${VERIFIEDBY} -Q -c "${CONFDIR}/.osversion.conf" ${HTMOUT}
+
+
+WHAT IF A NEW VERIFICATION TASK REQUIRES MORE THAN JUST RUNNING A COMMAND?
+
+If a verification task requires more than just running a command, or series
+of commands, and capturing the output, then you will need to create a separate
+shell script function to perform that verification task.  Examples of this
+already exist, please see the following functions:
+
+    verifyaccounts_zbksh
+    verifypamformat_zbksh
+    verifyservices_zbksh
+
+Use one of these functions as a template for your new task and modify it
+to fit your requirement. Once the new verification task function has
+been created, add it to the main function "checklist.zbksh".  Search for
+the existing functions above for examples of adding the function.
+
+Example in "checklist.zbksh":
+
+    verifyaccounts_zbksh ${VERBSTAT:+ -v} -X "${X}" -b ${VERIFIEDBY} -Q ${HTMOUT}
+
+
+HOW DO I DETERMINE WHICH CONFIGURATION FILE IS ASSOCIATED WITH EACH VERIFICATION TASK?
+
+In each configuration file is a variable name DESC which provides a description 
+of the verification task with which the file is associated.  To get a list of all the
+configuration files and their description, run a grep command searching for the variable DESC:
+
+    # grep DESC .*.conf
+
+The file specification ".*.conf" retrieves all files beginning with a
+literal dot ".", followed by zero or more characters, followed by a
+literal ".conf".
+
+The above grep command will return a list of files and descriptions similar to the
+following:
+
+    # grep DESC .*.conf
+    .0100_phys.conf:typeset DESC="Physical Servers"
+    .0105_phys_hwmodel.conf:typeset DESC="Verify Hardware Model Matches per the SDP"
+    .0110_phys_lightsgreen.conf:typeset DESC="Physical visit to server and make sure all server lights are green"
+    .0115_phys_serialnum.conf:typeset DESC="Verify Serial Number"
+    .0120_phys_net_nic.conf:typeset DESC="Verify NIC"
+    .0125_phys_rilo.conf:typeset DESC="Verify RILO configuration"
+    .0130_phys_raidmir.conf:typeset DESC="Verify the RAID Mirroring config"
+    .0200_all.conf:typeset DESC="All Servers"
+    .0203_all_svrname.conf:typeset DESC="Verify Server Name"
+    .0206_all_osversion.conf:typeset DESC="Verify OS Version and Architecture"
+    .0209_all_cpumem.conf:typeset DESC="Verify CPU and Memory"
+    .0212_all_fqdn.conf:typeset DESC="Verify FQDN /etc/hosts"
+    .0215_all_net_nicspeed.conf:typeset DESC="Verify NIC Speed and Duplex"
+    .0218_all_net_ipv6.conf:typeset DESC="Verify IPv6 Disabled"
+    .0221_all_timezone.conf:typeset DESC="Verify Time Zone"
+    .0224_all_disksize.conf:typeset DESC="Verify Disk Size Requirements, volume group and file system layout as per SDP"
+    .0227_all_swap.conf:typeset DESC="Verify Swap Space"
+    .0230_all_banner.conf:typeset DESC="Verify Banner"
+    .0233_all_qualysdb.conf:typeset DESC="Verify if the server added in Qualys database"
+    .0236_all_qualysvm.conf:typeset DESC="Verify Qualys VM scan status"
+    .0239_all_qualysmsb.conf:typeset DESC="Verify Qualys MSB compliance status"
+    .0242_all_user_pamadmin.conf:typeset DESC="Verify User \"pamadmin\""
+    .0245_all_user_qualys.conf:typeset DESC="Verify User \"qualys\""
+    .0248_all_srvc_autofs.conf:typeset DESC="Verify Service \"autofs\""
+    .0251_all_srvc_biod.conf:typeset DESC="Verify Service \"biod\""
+    .0254_all_srvc_portmap.conf:typeset DESC="Verify Service \"portmap\""
+    .0257_all_srvc_ntpd.conf:typeset DESC="Verify Service \"ntpd\""
+    .0260_all_iptables.conf:typeset DESC="Verify Iptables are disabled"
+    .0263_all_pamformat.conf:typeset DESC="Verify PAM Format IP FQDN Short"
+    .0300_std.conf:typeset DESC="Standard Tools"
+    ...
+    ...
+    ...
+
+
+
+HOW DO I RE-ORGANIZE THE OUTPUT FROM THESE SCRIPTS
+
+The ordering of the output is determined by the order in which the
+configuration files are processed.  If you want to change or re-order
+the output, then change the listing order of the configuration files.
+This can be achieved by  numbering the configuration file in the order
+you want them processed. An example is show below:
+
+        .0100_phys.conf
+        .0105_phys_hwmodel.conf
+        .0110_phys_lightsgreen.conf
+        .0115_phys_serialnum.conf
+        .0120_phys_net_nic.conf
+        .0125_phys_rilo.conf
+        .0130_phys_raidmir.conf
+        .0199_phys.conf.saved
+        .0200_all.conf
+        .0203_all_svrname.conf
+        .0206_all_osversion.conf
+        .0209_all_cpumem.conf
+        .0212_all_fqdn.conf
+        .0215_all_net_nicspeed.conf
+        .0218_all_net_ipv6.conf
+        .0221_all_timezone.conf
+        .0224_all_disksize.conf
+        .0227_all_swap.conf
+        .0230_all_banner.conf
+        .0233_all_qualysdb.conf
+        .0236_all_qualysvm.conf
+        .0239_all_qualysmsb.conf
+        .0242_all_user_pamadmin.conf
+        .0245_all_user_qualys.conf
+        .0248_all_srvc_autofs.conf
+        .0251_all_srvc_biod.conf
+        .0254_all_srvc_portmap.conf
+        .0257_all_srvc_ntpd.conf
+        .0260_all_iptables.conf
+        .0263_all_pamformat.conf
+        .0299_all.conf.saved
+        .0300_std.conf
+        .0305_std_bigfix.conf
+        .0310_std_ddmi.conf
+        .0315_std_symnetbackup.conf
+        .0320_std_hpom.conf
+        .0325_std_tripwire.conf
+        .0330_std_pamvds.conf
+        .0335_std_rpmpkgman.conf
+        .0340_std_openssh.conf
+        .0345_std_tectiassh.conf
+        .0350_std_sudo.conf
+        .0355_std_sendmail.conf
+        .0360_std_secpatch.conf
+        .0365_std_3rdparty.conf
+        .0370_std_restore.conf
+        .0375_std_cisnow.conf
+        .0399_std.conf.saved
+        .0400_pci.conf
+        .0405_pci_mcafeevirus.conf
+        .0410_pci_mcafeehips.conf
+        .0415_pci_ctrlminder.conf
+        .0420_pci_imperva.conf
+        .0425_pci_iss.conf
+        .0430_pci_qradar.conf
+        .0435_pci_iscsi.conf
+        .0499_pci.conf.saved
+        .0500_stg.conf
+        .0505_stg_stgsys.conf
+        .0510_stg_multipath.conf
+        .0515_stg_emcsw.conf
+        .0520_stg_mpio.conf
+        .0525_stg_vsf.conf
+        .0530_stg_veritas.conf
+        .0535_stg_hak.conf
+        .0540_stg_emcma.conf
+        .0545_stg_emcpp.conf
+        .0550_stg_powerpath.conf
+        .0599_stg.conf.saved
+        .0600_clstr.conf
+        .0605_clstr_install.conf
+        .0610_clstr_config.conf
+        .0615_clstr_name.conf
+        .0620_clstr_network.conf
+        .0625_clstr_virtnames.conf
+        .0630_clstr_storage.conf
+        .0635_clstr_adperms.conf
+        .0640_clstr_failover.conf
+        .0699_clstr.conf.saved
+        .0700_lpar.conf
+        .0705_lpar_lpmcomp.conf
+        .0710_lpar_bootdisks.conf
+        .0715_lpar_fcsattr.conf
+        .0720_lpar_fscsiattr.conf
+        .0725_lpar_vscsiattr.conf
+        .0730_lpar_hdiskattr.conf
+        .0735_lpar_tunables.conf
+        .0740_lpar_net_ethattr.conf
+        .0799_lpar.conf.saved
+        .0800_clean.conf
+        .0805_clean_tmpclean.conf
+        .0810_clean_uptime.conf
+        .0899_clean.conf.saved
+        .0900_user.conf
+        .0905_user_ora.conf
+        .0910_user_mqm.conf
+        .0915_user_tsm.conf
+        .0920_user_siteox.conf
+        .0925_user_dfrench.conf
+        .0930_user_hcladmin.conf
+        .0935_user_9hcladm.conf
+        .0940_user_9hcladm2.conf
+        .0945_user_9hcladm3.conf
+        .0950_user_pamadmin.conf
+        .0955_user_qualys.conf
+        .1005_group_oracle.conf
+        .1010_group_dba.conf
+        .1015_group_siteox.conf
+        .1020_group_dfrench.conf
+        .1099_group.conf.saved
+        .custom000.conf
+        .custom001.conf
+        .custom002.conf
+        .custom999.conf
+
+Notice the configuration file numbering skips numbers between each file.
+This is so additional configuration files may be inserted into the
+ordering scheme without renumbering (renaming) everything.
+
+
+
+HOW DO I INSERT SEGMENTATION HEADERS INTO THE OUTPUT?
+
+You can insert a segmentation header into the output by
+using a "header" configuration file. The content of an example
+content header is shown below
+
+        typeset VERSION="3.2"
+        typeset HEADER="${TRUE}"
+        typeset DESC="Physical Servers"
+
+The DESC variable value will be displayed in the segmentation header in
+the output. You can change the color of the background of the segmentation
+header in the configuration file or in the ".checklist.conf" file using
+the "BGHEAD" shell variable, example below:
+
+       BGHEAD="lightblue"
+
+Segmentation header configuration files should be named in such a way so
+they appear first in the file listing for the segment or section for
+which they are the header. If using a numbering scheme, they should be
+numbered so they are listed first. In the example, configuration headers
+are numbered such as:
+
+        .0100_phys.conf
+        .0200_all.conf
+        .0300_std.conf
+        .0400_pci.conf
+        .0500_stg.conf
+        .0600_clstr.conf
+        .0700_lpar.conf
+        .0800_clean.conf
+        .0900_user.conf
+
+Each of the above configuration files is numbered so it is listed first
+in the directory listing output and has content that defines the
+segmentation header text in the DESC shell variable.
+
+To get a list of header configuration files:
+
+    # grep 'HEADER.*TRUE' .*.conf
+    .0100_phys.conf:typeset HEADER="${TRUE}"
+    .0200_all.conf:typeset HEADER="${TRUE}"
+    .0300_std.conf:typeset HEADER="${TRUE}"
+    .0400_pci.conf:typeset HEADER="${TRUE}"
+    .0500_stg.conf:typeset HEADER="${TRUE}"
+    .0600_clstr.conf:typeset HEADER="${TRUE}"
+    .0700_lpar.conf:typeset HEADER="${TRUE}"
+    .0800_clean.conf:typeset HEADER="${TRUE}"
+    .0900_user.conf:typeset HEADER="${TRUE}"
+    .custom000.conf:typeset HEADER="${TRUE}"
+    .custom999.conf:typeset HEADER="${TRUE}"
+
+Notice the header configuration file named ".custom999.conf". The DESC shell variable
+has a value of "&nbsp;" which is an HTML designation as a "non-blocking space". This
+header line is displayed as a blank line in the HTML output. So if you want to insert
+a blank line in the output, use a header configuration file similar to this:
+
+    # cat .custom999.conf
+    typeset VERSION="3.2"
+    typeset HEADER="${TRUE}"
+    typeset DESC="&nbsp;"
+
+
+HOW DO I RUN THE CHECKLIST SCRIPT FOR A SPECIFIC VERIFICATION GROUP SUCH AS NON-PCI?
+OR PCI?  OR HI-IMPACT?  OR DATABASE?
+
+The checklist scripts have the capability of being executed based on a specific
+verification group such as non-PCI, PCI, Hi-Impact, Database and others. See the
+usage message associated with the checklist script to determine the command line
+option to use to display the verification group you want.
+
+    ./checklist.sh -?
+
+The verification groups are dependent upon each configuration item being
+classified according to the group or groups for which it should be
+executed. For example, the QRadar configuration item is a valid check
+for PCI compliant systems, but not for Non-PCI compliant systems. So the
+configuration file contains the following two verification group
+variable definitions:
+
+    ITEM_VGRP1="${FALSE}" 
+    ITEM_VGRP2="${TRUE}"
+
+These variable settings tell the checklist script, that this
+configuration item is NOT a valid check for Non-PCI systems, but IS a
+valid check for PCI systems. So when this configuration item is
+processed, if the user specified the command line option of "-1", this
+item would NOT be checked, whereas if the user specified the command
+line option of "-2", this item would be checked.
+
+    ./checklist.sh -1        #### Only performs Non-PCI checks
+    ./checklist.sh -2       #### Only performs PCI checks
+    ./checklist.sh -1 -2    #### Performs both Non-PCI and PCI checks
+
+As many verification groups as needed can be included on the command
+line when running the checklist script. Pre-identified groups include:
+
+    -1 = Non-PCI compliant
+    -2 = PCI compliant
+    -3 = Hi-Impact compliant
+    -4 = Database compliant
+
+Zero (0) or more of these groups can be specified when running the
+checklist verification script. If Zero (0) groups are identified, then
+ALL verification checks are performed.
+
+Verification grouping requires that every configuration item have
+"ITEM_VGRP" variables defined to be processed with any group. So this is
+an additional task to perform when creating a new checklist
+configuration item.
+
+The "-E" command line option reverses the logic of identifying
+verification groups, it EXCLUDES those verification items in the
+selected groups. If you use the -E command line option with verification
+groups, ALL verification items will be processed, except for those in
+the EXCLUDED verification groups identified on the command line.
+
+
+HOW CAN I SEE THE COMMANDS THAT ARE ACTUALLY BEING EXECUTED?
+
+A command execution file is generated during each execution of the
+checklist script. This file contains the command that is actually
+executed either locally or remotely.
+
+The file is generated in the /tmp directory and begins with "execl_"
+followed by the process ID number, followed by the filename extension
+".cmd".  An example file name
+
+    /tmp/execl_<PID>.cmd
+
+Each line of this file is derived from the command specified in each
+configuration file. Any command line processing that occurs by the shell
+is represented in this file. If the commands are executed on a remote
+system, the ssh command used to execute the remote command are also
+shown in this file.
+
+
+HOW CAN I CHANGE THE REMOTE OPERATING SYSTEM TYPE?
