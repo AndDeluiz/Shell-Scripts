@@ -1,0 +1,51 @@
+function execl_zbksh {
+  typeset REMARK="none"
+  typeset RETCODE
+  typeset CMD="${@}"
+  typeset TMPOUT="/tmp/execl_${$}_${RANDOM}.tmp"
+  typeset LOG_EXECL="${LOG_EXECL:-/tmp/execl_${$}.cmd}"
+
+  if [[ "_${CMD}" == "_"        ]] ||
+     [[ "_${CMD}" == _[Nn]/[Aa] ]]
+  then
+      (( VERBOSE  == TRUE )) && stderr_zbksh -- "# REMARK (n/a)...: ${REMARK}"
+      RETCODE="2"
+  else
+
+#############################################################
+
+#### Define the command execution mode, either local or remote depending upon
+#### the value of the SSHADDR variable. If it contains a remote IP address or
+#### hostname, define the execution mode variable. Otherwise it are set to
+#### NULL, which means the commands will run locally.
+
+# DLF       EXECMODE="print ${SSHADDR:+${CMD_SSH} ${OPT_SSH} -p ${SSHPORT} ${SSHUSER}@${SSHADDR}}"
+      EXECMODE="${SSHADDR:+${CMD_SSH} ${OPT_SSH} -p ${SSHPORT} ${SSHUSER}@${SSHADDR}}"
+# DLF       [[ "_${EXECMODE}" == "_" ]] && EXECMODE="eval"
+
+      (( VERBOSE == TRUE )) && stderr_zbksh -- "# ${EXECMODE:-eval} \"${CMD}\" > \"${TMPOUT}\" 2>&1  ####  $( date )"
+
+      stdout_zbksh -- "${EXECMODE:-eval} \"${CMD}\" > \"${TMPOUT}\" 2>&1  ####  ${CONFIGFILE##*/}  $( date )" >> "${LOG_EXECL}"
+
+      ${EXECMODE:-eval} "${CMD}" > "${TMPOUT}" 2>&1
+      RETCODE="${?}"
+      REMARK="$( < ${TMPOUT} )"
+      rm -f "${TMPOUT}"
+
+      if (( RETCODE == 0 ))
+      then
+          (( VERBOSE  == TRUE )) && stderr_zbksh -- "# REMARK (true)..: ${REMARK}"
+          RETCODE="0"
+      else
+          (( VERBOSE  == TRUE )) && stderr_zbksh -- "# REMARK (false).: ${REMARK}"
+          RETCODE="1"
+      fi
+  fi
+
+  stdout_zbksh -- "${REMARK}"
+
+  return ${RETCODE}
+
+}
+################################################################
+

@@ -1,0 +1,45 @@
+#!HISTORY
+
+History of Checklist-3.2 - System Verification Scripts
+ 
+This is a description of why this set of checklist scripts exist and the
+purpose they serve.
+ 
+In today's data center environment procedures and techniques change very
+rapidly, and it is usually impossible to create a procedure document for
+performing a task that is not obsolete the second it is created. New and
+better techniques are created constantly by the administrators
+performing the tasks. Therefore it is a waste of time, energy, and money
+to focus efforts on attempting to force the administrators to perform
+procedures that are out of date and obsolete. Furthermore, continuously
+updating the procedure document can be a full time job for the entire
+team.
+ 
+A better approach may be to focus on the end result.
+ 
+If an automated method of verifying the end result can be developed
+which performs an analysis of the system/environment, and produces a
+pass/fail report, then it doesn't matter how the system or environment
+was built. The important thing is the final product conforms to the
+desired result, is consistent, and is verifiable.
+ 
+This set of checklist scripts provides this capability across multiple
+platforms including AIX, HPUX, Solaris, and any Linux Distro.  With a
+little work, it could also perform this task for Windows using
+PowerShell.
+ 
+Each line of the checklist output is the result of running a command,
+capturing the result, determining success or failure, and displaying the
+result in an HTML based table.
+ 
+Adding or deleting lines from the output table is as simple as adding or
+deleting a configuration file. Each configuration file contains
+information to execute a command in multiple operating systems. So there
+is a single configuration file that executes variations on the same
+commands associated with each operating system. This permits unlimited
+variability in the checklist content and extensibility.
+ 
+The order of the output report is configurable by modifying the name of
+the configuration file. The configuration files are executed in the
+ASCII text order of the file names associated with each config file.
+

@@ -1,0 +1,64 @@
+function stderr_zbksh {
+  typeset VERSION="3.2"
+  typeset TRUE="0"
+  typeset FALSE="1"
+  typeset VERBOSE="${FALSE}"
+  typeset VERYVERB="${FALSE}"
+  typeset OPTIND="1"
+  typeset RETCODE="99"
+  typeset FDNUM="2"
+
+################################################################
+
+#### 
+#### Process the command line options and arguments, saving
+#### the values as appropriate.
+#### 
+
+  while getopts ":vV" OPTION
+  do
+      case "${OPTION}" in
+          'v') VERBOSE="${TRUE}";;
+          'V') VERYVERB="${TRUE}";;
+          '?') usagemsg_stderr_zbksh "${0}" ${VERSION} && return 1 ;;
+          ':') usagemsg_stderr_zbksh "${0}" ${VERSION} && return 1 ;;
+      esac
+  done
+   
+  shift $(( ${OPTIND} - 1 ))
+  [[ "_${1}" == "_--" ]] && shift 1
+  [[ "_${1}" == "_--" ]] && shift 1
+  [[ "_${1}" == "_--" ]] && shift 1
+  
+#### 
+#### Check the command line arguments to verify they are valid values and that all
+#### necessary information was specified.
+#### 
+
+  trap "usagemsg_stderr_zbksh ${0}" EXIT
+
+  trap "-" EXIT
+  
+################################################################
+
+#### 
+#### Display some program info and the command line arguments specified
+#### if "VERBOSE" mode was specified.
+#### 
+
+  (( VERYVERB == TRUE )) && set -x
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Program........: ${0}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Version........: ${VERSION}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# File Descriptor: ${FDNUM}"
+
+################################################################
+################################################################
+################################################################
+
+  echo_zbksh -u ${FDNUM} -- "${@}"
+  RETCODE=$?
+
+  return ${RETCODE}
+
+}
+################################################################

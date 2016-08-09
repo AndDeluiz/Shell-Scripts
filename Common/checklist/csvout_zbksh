@@ -1,0 +1,107 @@
+function csvout_zbksh {
+  typeset VERSION="3.2"
+  typeset TRUE="0"
+  typeset FALSE="1"
+  typeset VERBOSE="${FALSE}"
+  typeset VERYVERB="${FALSE}"
+  typeset OPTIND="1"
+  typeset DESC="undefined"
+  typeset VERIFIEDBY="undefined"
+  typeset ANS[0]="Good"
+  typeset ANS[1]="Bad"
+  typeset ANS[2]="N/A"
+  typeset REMARK="undefined"
+  typeset X=","
+  typeset RETCODE="99"
+  typeset STATUS="${X}${X}${ANS[2]}"
+  typeset STATUS="${X}${ANS[2]}"
+  typeset QUOTED="${FALSE}"
+  typeset RESULT="undefined"
+
+################################################################
+
+#### 
+#### Process the command line options and arguments, saving
+#### the values as appropriate.
+#### 
+
+#### csvout -X "${X}" -Q -R "${RESULT}"      -D "${DESC}"    -S "${STATUS}"
+####                     -B "${VERIFIEDBY}"  -M "${REMARK}"  -C "${RETCODE}"
+
+  while getopts ":vVu:X:R:D:B:M:C:Q" OPTION
+  do
+      case "${OPTION}" in
+          'u') VERIFIEDBY="${OPTARG}";;
+          'X') X="${OPTARG}";;
+          'Q') QUOTED="${TRUE}";;
+          'R') RESULT="${OPTARG}";;
+          'D') DESC="${OPTARG}";;
+          'B') VERIFIEDBY="${OPTARG}";;
+          'M') REMARK="${OPTARG}";;
+          'C') RETCODE="${OPTARG}";;
+          'v') VERBOSE="${TRUE}";;
+          'V') VERYVERB="${TRUE}";;
+          '?') usagemsg_csvout_zbksh "${0}" ${VERSION} && return 1 ;;
+          ':') usagemsg_csvout_zbksh "${0}" ${VERSION} && return 1 ;;
+      esac
+  done
+   
+  shift $(( ${OPTIND} - 1 ))
+  
+#### 
+#### Check the command line arguments to verify they are valid values and that all
+#### necessary information was specified.
+#### 
+
+  trap "usagemsg_csvout_zbksh ${0}" EXIT
+
+  if [[ "_${VERIFIEDBY}" == "_" ]]
+  then
+    stderr_zbksh -- "# ERROR: Verified By User not specified"
+    return 2
+  fi
+
+  trap "-" EXIT
+  
+################################################################
+
+#### 
+#### Display some program info and the command line arguments specified
+#### if "VERBOSE" mode was specified.
+#### 
+
+  (( VERYVERB == TRUE )) && set -x
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Program........: ${0}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Version........: ${VERSION}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Verified By....: ${VERIFIEDBY}"
+
+################################################################
+################################################################
+################################################################
+
+  RETCODE="0"
+  [[ "_${RESULT}" == "_${ANS[1]}" ]] && RETCODE="1"
+
+  (( QUOTED == TRUE )) && X="\"${X}\""
+
+  [[ "_${RESULT}" == "_${ANS[0]}" ]] && STATUS="${ANS[0]}${X}${X}"
+  [[ "_${RESULT}" == "_${ANS[1]}" ]] && STATUS="${X}${ANS[1]}${X}"
+  [[ "_${RESULT}" == "_${ANS[2]}" ]] && STATUS="${X}${X}${ANS[2]}"
+
+  [[ "_${RESULT}" == "_${ANS[0]}" ]] && STATUS="${ANS[0]}${X}"
+  [[ "_${RESULT}" == "_${ANS[1]}" ]] && STATUS="${ANS[1]}${X}"
+  [[ "_${RESULT}" == "_${ANS[2]}" ]] && STATUS="${X}${ANS[2]}"
+
+  if (( QUOTED == TRUE )) 
+  then
+      (( VERBOSE == TRUE )) && stderr_zbksh -- "# \"Description${X}Result${X}VerifiedBy${X}Remarks${X}Return Code\""
+      stdout_zbksh -- "\"${DESC}${X}${STATUS}${X}${VERIFIEDBY}${X}${REMARK}${X}${RETCODE}\""
+  else
+      (( VERBOSE == TRUE )) && stderr_zbksh -- "# Description ${X} Result ${X} Verified By ${X} Remarks ${X} Return Code"
+      stdout_zbksh -- "${DESC}${X}${STATUS}${X}${VERIFIEDBY}${X}${REMARK}${X}${RETCODE}"
+  fi
+
+  return ${RETCODE}
+
+}
+################################################################

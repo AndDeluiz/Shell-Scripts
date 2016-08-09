@@ -1,0 +1,45 @@
+#!HOWTO
+
+Description: Unix/Linux Checklist
+Program....: checklist-3.2
+Date.......: 20160517
+Author.....: Dana French
+
+To use these scripts, they must first be copied to the target system to
+be verified, which can be done as follows:
+
+First SSH to one of the Kickstart Servers: 153.6.60.62 or 10.203.236.1
+
+    # ssh <9id>@<NIMServer> or <KickstartServer>
+    # cd /scripts/checklist-3.2
+
+Next, copy the checklist-3.2 directory to the target system.
+
+    # scp -r /scripts/checklist-3.2  9id@targetSystemHostName:/usr/local/scripts/checklist-3.2
+
+Now logout from the NIM server, and login to the target system.
+
+    # ssh 9id@targetSystemHostName
+    # cd /usr/local/scripts/checklist-3.2
+
+Edit the "runthis.sh" or "runthis.bash" script to contain the RITM,
+username, and location information you want displayed in the checklist
+verification output. Also include the Verification group command line
+options if you want to use Verification groups:
+
+    # vi ./runthis.sh      #### Run this for AIX or Linux systems with Korn Shell 93
+    # vi ./runthis.bash    #### Run this for Linux systems with bash
+
+Execute the verification script to generate CSV or HTML output.
+
+NOTE: It may be necessary to modify the FPATH and CONFDIR variables in
+the script named "checklist.zbksh" to reflect the directory in which
+they exist.
+
+    # ./runthis.sh      #### Run this for AIX or Linux systems with Korn Shell 93
+    # ./runthis.bash    #### Run this for Linux systems with bash
+
+The output from these scripts will be generated in the "/tmp" directory and
+will have a file name of "RITM0000000_hostname_checklist.html"
+
+

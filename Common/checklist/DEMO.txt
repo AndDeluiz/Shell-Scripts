@@ -1,0 +1,381 @@
+#!DEMO.txt
+
+Description: Unix/Linux Checklist
+Program....: checklist-3.2
+Date.......: 20160517
+Author.....: Dana French
+
+This is a presentation script for conducting a demonstration of the
+checklist verification scripts. The demonstration is divided into
+slides and live screen demos of the script and files.
+
+################################################################
+#### Slide 1 - Title Slide
+
+May 2016
+
+Checklist Team
+Organization Name
+
+Verification Checklist Demonstration
+
+
+################################################################
+#### Slide 2 - Origin
+
+In today's data center environment, procedures and techniques change
+very rapidly, and it is usually impossible to create a procedure
+document for performing a task that is not obsolete the second it is
+created. New and better techniques are created constantly by the
+administrators performing the tasks. Therefore it is a waste of time,
+energy, and money to focus efforts on attempting to force the
+administrators to perform procedures that are out of date and obsolete.
+Furthermore, continuously updating the procedure document can be a full
+time job for the entire team.
+ 
+        A better approach may be to focus on the end result.
+
+Focus on the final product instead of the methodology that produced it,
+i.e. Manual, automated, or cloud based procedures.
+
+################################################################
+#### Slide 3 - Overview
+
+This set of checklist scripts provides a method to verify that a newly
+built system (however it was built) conforms to a predefined or dynamic
+set of standards. These standards can be dynamically produced from
+Service-Now once and the script will accept these new verification
+standards immediately.
+
+The long term goal here is for Service-Now to produce a set of
+configuration standards for each target system so it can be verified
+according any configuration required.
+
+Service-Now, Automation Engine, Manual Administration
+  -> System Standards
+    -> Verification Commands
+      -> Generate Verification Script Configuration Files
+        -> Execute Verification Script on each target system
+
+
+################################################################
+#### Slide 4 - Scope
+
+This presentation is meant to demonstrate an existing set of
+verification scripts, and to suggest a direction for future development.
+
+The point of the demonstration is to foster collaboration between HCL
+teams to reduce effort and redundancy.
+
+################################################################
+#### Slide 5 - Considerations
+
+The immediate goal is to provide an automated method for verifying new
+target systems conform to design standards and provide an easy mechanism for
+constantly changing standards. This method must accomodate the
+following:
+
+    o Multiple Operating Systems
+      - AIX - 5.3, 6.1, 7.1, 7.2
+      - Solaris 10, 11
+      - HPUX 11.31, 11.23
+      - Redhat Linux 6.4, 6.5, 7.1
+      - Redhat Linux on Power	
+      - Redhat Linux on PowerLE
+      - Future Linux Distros as yet undefined
+      - MS Windows (with PowerShell)
+      - MS Windows 10 (with Ubuntu)
+
+    o Multiple Architectures
+      - IBM Power
+      - Sun SPARC
+      - HP Itanium
+      - Intel 
+      - VMware
+
+    o Multiple Shell Environments
+      - Korn Shell 88
+      - Korn Shell 93
+      - Bash
+      - Z-Shell
+      - Windows PowerShell
+      - others
+
+################################################################
+#### Slide 6 - Features
+
+The checklist scripts presented here is the first draft of a solution
+for all of the requirements described in the previous slides. It currently
+has the following features:
+
+    o Checklist-3.2
+      - Multi-Shell Enabled
+        -- ksh93
+        -- bash
+        -- zsh
+      - Multiple Operating Systems
+        -- AIX - Any version
+        -- Solaris - Any Version
+        -- HPUX - Any Version
+        -- Redhat Linux - Any Version
+        -- Redhat Linux on Power - Any Version
+        -- Redhat Linux on PowerLE - Any Version
+        -- Future Linux Distros as yet undefined
+        -- MS Windows 10 (with Ubuntu)
+      - Dynamic Configuration
+        -- All verifications are configuration file based
+        -- Verification groups
+           --- non-PCI
+           --- PCI
+           --- Hi-Impact
+           --- Database
+           --- Up to 9 verification groups
+      - Dynamic Output Format
+        -- HTML
+        -- CSV
+
+################################################################
+#### Slide 7 - Preparation
+
+The checklist scripts exist as a function library and can be consolidated
+into a single script to run in a "bash" interpreter.
+
+    $ cd ~/scripts/checklist-3.2
+    $ ls
+    $ cat runthis.sh
+    $ cat mkbash.bash
+
+When running the checklist script, the administrator would edit the file
+"runthis.sh" or "runthis.bash" to add information specific to the
+new target system, such as Change/RITM number, Location, Domain name, etc. 
+
+The script "runthis.sh" or "runthis.bash" will eventually be
+automatically generated from Service-Now from the target system
+specifications.
+
+The output (HTML or CSV) from the checklist script goes to STDOUT, and
+can be redirected to any file, pipeline, or location.
+
+################################################################
+#### Slide 8 - Configuration Files
+
+A configuration file exists for each verification check to perform.
+
+    $ cd ~/scripts/checklist-3.2
+    $ ls -a
+
+The configuration files are processed in the order in which they appear
+in the directory listing. That is why each file begins with a number.
+The number designates the processing order. Numbers are skipped to allow
+the addition of new configuration files.
+
+################################################################
+#### Slide 9 - Configuration Content
+
+Each configuration file is a shell script containing variable
+definitions used by the Checklist script. A typical configuration
+file:
+
+    $ cat .0105_phys_hwmodel.conf
+    VERSION="3.2"
+    DESC="Verify Hardware Model Matches per the SDP"
+    ANS[0]="Good"
+    ANS[1]="Bad"
+    ANS[2]="N/A"
+    OSNAME="$( uname -s )"
+    RESULT="${ANS[1]}"
+    REMARK="none"
+    RETCODE="99"
+    STATUS="${X}${ANS[2]}"
+    QUOTED="${FALSE}"
+    
+    ITEM_VGRP1="${TRUE}"
+    ITEM_VGRP2="${TRUE}"
+    
+    [[ "_${OSNAME}" == "_AIX"    ]] && OSCMD="lsattr -El sys0 -a modelname -F value 2>&1"
+    [[ "_${OSNAME}" == "_Linux"  ]] && OSCMD="/usr/sbin/dmidecode -s system-product-name"
+    [[ "_${OSNAME}" == "_Cygwin" ]] && OSCMD="uname -s -m"
+
+################################################################
+#### Slide 10 - Usage Message
+
+The available options for the checklist script can be viewed in the
+"Usage Message" by specifying the "-?" command line option when running
+the script:
+
+    $ cd ~/scripts/checklist-3.2
+    $ ./checklist.bash -?
+
+Function: ./checklist.bash        Version: 3.2
+
+Data Center Automation - Unix/Linux Checklist
+
+This set of scripts provides an automated procedure to perform a
+post-install verification of any Unix system in the data center environment.
+These scripts are written in a "Multi-Shell" configuration, meaning they
+can be executed by several different interpreters, including Korn Shell
+93, Bash, and Z-Shell.
+
+Usage: checklist.bash [-?vV] -b username -h hostname [-p PortNum]
+        [-R RITM####] [-D domainName] [-L locationName]
+        [-W clusterName] [-X ","] [-H] [-S] [-0123456789] 
+  Where:
+    -v = Verbose mode - displays dpa_runreport function info
+    -V = Very Verbose Mode - debug output displayed
+    -b = Verified By Username
+    -u = SSH Username			(Default:root)
+    -p = SSH Port number		(Default:22)
+    -h = SSH Hostname or IP address	(Default:HOSTNAME)
+    -R = Change Request Number		(Default:RITM0000000)
+    -D = DNS Domain Name		(Default:mtxia.com)
+    -L = Data Center Location		(Default:NYC)
+    -W = VMware Cluster Name		(Default:N/A)
+    -H = Generate HTML output		(Default:CSV)
+    -X = Field Delimiter		(Default:",")
+    -S = Segmented and Categorized Output	(Default:"Alphabetized")
+    -0 = Show ALL Verification Items in Output:			(Default:All)
+    -1 = Show Non-PCI Verification Group 1 Items in Output:	(Default:All)
+    -2 = Show PCI Verification Group 2 Items in Output:		(Default:All)
+    -3 = Show Hi-Impact Verification Group 3 Items in Output:	(Default:All)
+    -4 = Show Database Verification Group 4 Items in Output:	(Default:All)
+    -5 = Show Verification Group 5 Items in Output:		(Default:All)
+    -6 = Show Verification Group 6 Items in Output:		(Default:All)
+    -7 = Show Verification Group 7 Items in Output:		(Default:All)
+    -8 = Show Verification Group 8 Items in Output:		(Default:All)
+    -9 = Show Verification Group 9 Items in Output:		(Default:All)
+
+Example Usage:
+    ./checklist.bash -L Anytown -R RITM123456 -b username -h localhost -H > tmp.html
+
+Author: Dana French
+
+"AutoContent" enabled
+"Multi-Shell" enabled
+"LocalRemote" enabled
+
+################################################################
+#### Slide 11 - Running the Script
+
+Once the "runthis" script has been edited by the administrator or
+generated by Service-Now with the specific target system information, it
+can be executed from the command line:
+
+    $ cd ~/scripts/checklist-3.2
+    $ ./runthis.bash
+
+It may or may not display information to the screen depending upon how
+the script was edited for that purpose.
+
+################################################################
+#### Slide 12 - Output Location
+
+In this example, the output is sent in HTML format to a file
+in the temporary directory. The name of the file consists of
+dynamic information for the target system:
+
+    $ cd /tmp
+    $ ls -alrt
+...
+...
+...
+-r--r--r--  1 Administrator None       11 May 18 10:23 .X1-lock
+drwxrwxrwt+ 1 Administrator None        0 May 18 10:23 .X11-unix
+-rw-r--r--  1 Administrator None    29980 May 18 11:25 RITM000000_MININT-CO5VUHG_checklist.html
+
+This HTML file can be viewed with any browser.
+
+If CSV output is generated, it can be viewed in any text or spreadsheet editor.
+
+################################################################
+#### Slide 13 - Output Format
+
+The verification check output fields are as follows:
+
+    o Field 1 - Description of the verification check performed
+              - The Configuration file name is shown in parenthesis
+    o Field 2 - Status of the verification check: Good or Bad.
+    o Field 3 - Status of the verification check: N/A
+    o Field 4 - Username of the person who performed the verification
+    o Field 5 - Remarks or output generated by the verification check
+    o Field 6 - Return code of the command(s) executed during the verification check
+
+The HTML output is color-coded using blue, green, red, and grey for each of the
+following line types:
+
+    o Blue  - Header and information lines
+    o Green - Verification check performed successfully
+    o Red   - Verification check was unsuccessful
+    o Grey  - Verification check is not applicable
+
+The CSV output is not color coded.
+
+################################################################
+#### Slide 14 - Questions?
+
+Features?
+See Features slide above …
+
+Gold Code Location?
+10.203.236.1:/scripts/checklist-3.2
+
+How to Run?
+./runthis.sh
+./runthis.bash
+./checklist.zbksh
+./checklist.bash (generated by ./mkbash.bash)
+
+How to Modify?
+Edit/Add/Delete .*.conf
+
+Documentation?
+README.txt
+HISTORY.txt
+HOWTO.txt
+
+################################################################
+#### Slide 15 - Future Work?
+
+Automatically download the checklist verification scripts to each target
+system as part of the verification process.
+
+Insert the results of last execution of each verification check back
+into the configuration file for future reference. Or output the results
+to another hidden file in the checklist directory such as .*.results
+
+Add a command line option that allows user to specify that verification
+check results be saved as individual "results" files.
+
+Add a command line option that specifies a directory location for
+storage of individual results files.
+
+Have "Service-Now" generate the configuration file for each verification
+task identified for each target system. So when the target system components
+change in Service-Now, the verification checklist is automatically
+updated and current.
+
+Have "Service-Now" automatically/periodically generate and execute the
+verification checklist.
+
+################################################################
+#### Slide 16 - Future Work? (Continued)
+
+Create Centralized repository of Verification Command configuration
+files. Have all teams utilize this central repository for their
+applications and scripts. Can be generated and maintained by
+Service-Now.
+
+Remove Associative Arrays from OSCMD variable in Configuration files,
+use straight test && command syntax, i.e.:
+
+Change This:
+
+    OSCMD[AIX]="/usr/bin/someAIXcommand"
+    OSCMD[Linux]="/usr/bin/someLinuxCommand"
+    OSCMD[Cygwin]="/usr/bin/someGNUcommand"
+
+To this:
+
+    [[ "_${OSNAME}" == "_AIX"       ]] && OSCMD="/usr/bin/someAIXcommand"
+    [[ "_${OSNAME}" == "_Linux"    ]] && OSCMD="/usr/bin/someLinuxCommand"
+    [[ "_${OSNAME}" == "_Cygwin" ]] && OSCMD="/usr/bin/someGNUcommand"
+

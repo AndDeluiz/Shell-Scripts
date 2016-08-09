@@ -1,0 +1,162 @@
+function mkheader_zbksh {
+  typeset VERSION="3.2"
+  typeset TRUE="0"
+  typeset FALSE="1"
+  typeset VERBOSE="${FALSE}"
+  typeset VERYVERB="${FALSE}"
+  typeset OPTIND="1"
+  typeset DESC="Create spreadsheet header information"
+  typeset ANS[0]="Good"
+  typeset ANS[1]="Bad"
+  typeset ANS[2]="N/A"
+  typeset OSNAME="${OSNAME:-$( execl_zbksh 'uname -s' )}"
+  typeset OSVER="undefined"
+  typeset RESULT="${ANS[1]}"
+  typeset X=","
+  typeset RETCODE="99"
+  typeset RMNUM="${CHGREQNUMB:-RITM000000}"
+  typeset HNAME="${SSHADDR}"
+  typeset DNAME="${DOMAINNAME:-localdomain.pvt}"
+  typeset LOCATION="${DCLOCATION:-Anytown}"
+  typeset VMWCLUSTER=""
+  typeset CSVOUT="-C"
+  typeset HTMOUT=""
+  typeset TGGL_HTM="${FALSE}"
+  typeset TGGL_CSV="${TRUE}"
+
+  typeset BGHEAD="${BGHEAD:-lightblue}"
+
+################################################################
+
+#### 
+#### Process the command line options and arguments, saving
+#### the values as appropriate.
+#### 
+
+  while getopts ":vVu:X:R:h:D:L:W:H" OPTION
+  do
+      case "${OPTION}" in
+
+          'R') RMNUM="${OPTARG}";;
+          'h') HNAME="${OPTARG}";;
+          'D') DNAME="${OPTARG}";;
+          'L') LOCATION="${OPTARG}";;
+          'W') VMWCLUSTER="${OPTARG}";;
+          'X') X="${OPTARG}";;
+          'H') HTMOUT="-H"
+               CSVOUT=""
+               TGGL_HTM="${TRUE}"
+               TGGL_CSV="${FALSE}";;
+          'v') VERBOSE="${TRUE}";;
+          'V') VERYVERB="${TRUE}";;
+          '?') usagemsg_mkheader_zbksh "${0}" ${VERSION} && return 1 ;;
+          ':') usagemsg_mkheader_zbksh "${0}" ${VERSION} && return 1 ;;
+      esac
+  done
+   
+  shift $(( ${OPTIND} - 1 ))
+  
+#### 
+#### Check the command line arguments to verify they are valid values and that all
+#### necessary information was specified.
+#### 
+
+  trap "usagemsg_mkheader_zbksh ${0}" EXIT
+
+  if [[ "_${RMNUM}" == "_" ]]
+  then
+    stderr_zbksh -- "# ERROR: ${0} Change Request Number not specified"
+    return 2
+  fi
+
+  if [[ "_${HNAME}" == "_" ]]
+  then
+        HNAME="$( hostname )"
+        HNAME="${HNAME%%.*}"
+  fi
+
+  if [[ "_${DNAME}" == "_" ]]
+  then
+    stderr_zbksh -- "# ERROR: ${0}: Domain Name not specified"
+    return 4
+  fi
+
+  if [[ "_${LOCATION}" == "_" ]]
+  then
+    stderr_zbksh -- "# ERROR: ${0}: Location not specified"
+    return 5
+  fi
+
+  trap "-" EXIT
+  
+################################################################
+
+#### 
+#### Display some program info and the command line arguments specified
+#### if "VERBOSE" mode was specified.
+#### 
+
+  (( VERYVERB == TRUE )) && set -x
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Program........: ${0}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Version........: ${VERSION}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Description....: ${DESC}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# OS Name........: ${OSNAME}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Change Request.: ${RMNUM}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Server Name....: ${HNAME}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Domain Name....: ${DNAME}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Location.......: ${LOCATION}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# VMware Cluster.: ${VMWCLUSTER}"
+
+################################################################
+################################################################
+################################################################
+
+  RESULT="${ANS[1]}"
+
+  if (( TGGL_CSV == TRUE ))
+  then
+      stdout_zbksh -- "Unix/Linux Checklist (${VERSION})"
+
+      stdout_zbksh -- "Change Request Number${X}${RMNUM}"
+      stdout_zbksh -- "Server Name${X}${HNAME}"
+      stdout_zbksh -- "Domain Name${X}${DNAME}"
+      stdout_zbksh -- "Location${X}${LOCATION}"
+      stdout_zbksh -- "VMware Cluster (Applicable only for Red Hat Linux${X}${VMWCLUSTER}"
+      stdout_zbksh -- "FQDN${X}${HNAME%%.*}.${DNAME}"
+
+      stdout_zbksh -- ""
+# Obsolete      stdout_zbksh -- "List Items:${X}Status:GOOD${X}Status:BAD${X}Status:N/A${X}Verified by:${X}Remarks:"
+      stdout_zbksh -- "List Items:${X}Status:GOOD/BAD${X}Status:N/A${X}Verified by:${X}Remarks:"
+  fi
+
+  if (( TGGL_HTM == TRUE ))
+  then
+      X="</TH><TH Colspan=\"4\" Bgcolor=\"${BGHEAD}\">"
+      stdout_zbksh -- "<HTML><BODY>"
+      stdout_zbksh -- "<P><TABLE Border=\"1\">"
+      stdout_zbksh -- "<P><TR><TH Colspan=\"7\" Bgcolor=\"${BGHEAD}\">Unix/Linux Checklist (${VERSION})<BR/><FONT Size=\"1\">$( date )</FONT></TH></TR></P>"
+
+      stdout_zbksh -- "<P><TR><TH Colspan=\"3\" Bgcolor=\"${BGHEAD}\">Change Request Number${X}${RMNUM}</TH></TR></P>"
+      stdout_zbksh -- "<P><TR><TH Colspan=\"3\" Bgcolor=\"${BGHEAD}\">Server Name${X}${HNAME}</TH></TR></P>"
+      stdout_zbksh -- "<P><TR><TH Colspan=\"3\" Bgcolor=\"${BGHEAD}\">Domain Name${X}${DNAME}</TH></TR></P>"
+      stdout_zbksh -- "<P><TR><TH Colspan=\"3\" Bgcolor=\"${BGHEAD}\">Location${X}${LOCATION}</TH></TR></P>"
+      stdout_zbksh -- "<P><TR><TH Colspan=\"3\" Bgcolor=\"${BGHEAD}\">VMware Cluster (Applicable only for Red Hat Linux${X}${VMWCLUSTER}</TH></TR></P>"
+      stdout_zbksh -- "<P><TR><TH Colspan=\"3\" Bgcolor=\"${BGHEAD}\">FQDN${X}${HNAME%%.*}.${DNAME}</TH></TR></P>"
+
+      X="</TH><TH Bgcolor=\"${BGHEAD}\">"
+      stdout_zbksh -- "<P><TR><TH Colspan=\"7\">&nbsp;</TH></TR></P>"
+# Obsolete       stdout_zbksh -- "<P><TR><TH Bgcolor=\"${BGHEAD}\">List Items:${X}Status:GOOD${X}Status:BAD${X}Status:N/A${X}Verified by:${X}Remarks:${X}</TH></TR></P>"
+      stdout_zbksh -- "<P><TR><TH Bgcolor=\"${BGHEAD}\">List Items:${X}Status:GOOD/BAD${X}Status:N/A${X}Verified by:${X}Remarks:${X}</TH></TR></P>"
+  fi
+
+################################################################
+################################################################
+################################################################
+
+  RETCODE="0"
+  [[ "_${RESULT}" == "_${ANS[1]}" ]] && RETCODE="1"
+
+  return ${RETCODE}
+
+}
+################################################################

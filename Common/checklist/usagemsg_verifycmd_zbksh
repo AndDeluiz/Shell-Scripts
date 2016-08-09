@@ -1,0 +1,28 @@
+function usagemsg_verifycmd_zbksh {
+  stdout_zbksh -- ""
+  stdout_zbksh -- "${1:+Program: ${1}}${2:+        Version: ${2}}"
+
+  stdout_zbksh -- ""
+  stdout_zbksh -- "Data Center Automation - "
+
+  stdout_zbksh -- ""
+  stdout_zbksh -- "Usage: ${1##*/} [-?vV] -u username"
+  stdout_zbksh -- "  Where:"
+  stdout_zbksh -- "    -v = Verbose mode - displays dpa_runreport function info"
+  stdout_zbksh -- "    -V = Very Verbose Mode - debug output displayed"
+  stdout_zbksh -- "    -u = Verified By Username"
+
+  stdout_zbksh -- ""
+  stdout_zbksh -- "Example Usage:"
+  stdout_zbksh -- "    ${1} -v "
+
+  stdout_zbksh -- ""
+  stdout_zbksh -- "Author: Dana French, Copyright 2016, All Rights Reserved"
+  stdout_zbksh -- ""
+  stdout_zbksh -- "\"AutoContent\" enabled"
+  stdout_zbksh -- "\"Multi-Shell\" enabled"
+  stdout_zbksh -- ""
+
+  return 0
+
+}

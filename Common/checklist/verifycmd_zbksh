@@ -1,0 +1,353 @@
+function verifycmd_zbksh {
+  if [[ "_${SHCODE}" == _korn ]]
+  then
+    typeset TRUE="0"
+    typeset FALSE="1"
+    typeset VERBOSE="${FALSE}"
+    typeset VERYVERB="${FALSE}"
+    typeset OPTIND="1"
+    typeset NICID="undefined"
+    typeset CSVOUT="-C"
+    typeset HTMOUT=""
+    typeset CONFIGFILE=""
+    typeset HEADER="${FALSE}"
+    typeset CONFIG_RETURN=""
+    typeset TGGL_SEG="${FALSE}"
+    typeset SEGOUT=""
+    typeset TGGL_HTM="${FALSE}"
+    typeset TGGL_CSV="${TRUE}"
+    typeset TGGL_SAV="${FALSE}"
+    typeset SAVOUT=""
+    typeset TGGL_EXC="${FALSE}"
+    typeset EXCOUT=""
+    typeset SHOW_VGRP0="${TRUE}"	OUT_VGRP0=""
+    typeset SHOW_VGRP1="${FALSE}"	OUT_VGRP1=""
+    typeset SHOW_VGRP2="${FALSE}"	OUT_VGRP2=""
+    typeset SHOW_VGRP3="${FALSE}"	OUT_VGRP3=""
+    typeset SHOW_VGRP4="${FALSE}"	OUT_VGRP4=""
+    typeset SHOW_VGRP5="${FALSE}"	OUT_VGRP5=""
+    typeset SHOW_VGRP6="${FALSE}"	OUT_VGRP6=""
+    typeset SHOW_VGRP7="${FALSE}"	OUT_VGRP7=""
+    typeset SHOW_VGRP8="${FALSE}"	OUT_VGRP8=""
+    typeset SHOW_VGRP9="${FALSE}"	OUT_VGRP9=""
+  elif [[ "_${SHCODE}" == _bash ]]
+  then
+    declare TRUE="0"
+    declare FALSE="1"
+    declare VERBOSE="${FALSE}"
+    declare VERYVERB="${FALSE}"
+    declare OPTIND="1"
+    declare NICID="undefined"
+    declare CSVOUT="-C"
+    declare HTMOUT=""
+    declare CONFIGFILE=""
+    declare HEADER="${FALSE}"
+    declare CONFIG_RETURN=""
+    declare TGGL_SEG="${FALSE}"
+    declare SEGOUT=""
+    declare TGGL_HTM="${FALSE}"
+    declare TGGL_CSV="${TRUE}"
+    declare TGGL_SAV="${FALSE}"
+    declare SAVOUT=""
+    declare TGGL_EXC="${FALSE}"
+    declare EXCOUT=""
+    declare SHOW_VGRP0="${TRUE}"	OUT_VGRP0=""
+    declare SHOW_VGRP1="${FALSE}"	OUT_VGRP1=""
+    declare SHOW_VGRP2="${FALSE}"	OUT_VGRP2=""
+    declare SHOW_VGRP3="${FALSE}"	OUT_VGRP3=""
+    declare SHOW_VGRP4="${FALSE}"	OUT_VGRP4=""
+    declare SHOW_VGRP5="${FALSE}"	OUT_VGRP5=""
+    declare SHOW_VGRP6="${FALSE}"	OUT_VGRP6=""
+    declare SHOW_VGRP7="${FALSE}"	OUT_VGRP7=""
+    declare SHOW_VGRP8="${FALSE}"	OUT_VGRP8=""
+    declare SHOW_VGRP9="${FALSE}"	OUT_VGRP9=""
+  else
+    TRUE="0"
+    FALSE="1"
+    VERBOSE="${FALSE}"
+    VERYVERB="${FALSE}"
+    OPTIND="1"
+    NICID="undefined"
+    CSVOUT="-C"
+    HTMOUT=""
+    CONFIGFILE=""
+    HEADER="${FALSE}"
+    CONFIG_RETURN=""
+    TGGL_SEG="${FALSE}"
+    SEGOUT=""
+    TGGL_HTM="${FALSE}"
+    TGGL_CSV="${TRUE}"
+    TGGL_SAV="${FALSE}"
+    SAVOUT=""
+    TGGL_EXC="${FALSE}"
+    EXCOUT=""
+    SHOW_VGRP0="${TRUE}"	OUT_VGRP0=""
+    SHOW_VGRP1="${FALSE}"	OUT_VGRP1=""
+    SHOW_VGRP2="${FALSE}"	OUT_VGRP2=""
+    SHOW_VGRP3="${FALSE}"	OUT_VGRP3=""
+    SHOW_VGRP4="${FALSE}"	OUT_VGRP4=""
+    SHOW_VGRP5="${FALSE}"	OUT_VGRP5=""
+    SHOW_VGRP6="${FALSE}"	OUT_VGRP6=""
+    SHOW_VGRP7="${FALSE}"	OUT_VGRP7=""
+    SHOW_VGRP8="${FALSE}"	OUT_VGRP8=""
+    SHOW_VGRP9="${FALSE}"	OUT_VGRP9=""
+  fi
+################################################################
+
+#### 
+#### Process the command line options and arguments, saving
+#### the values as appropriate.
+#### 
+
+  while getopts ":vVb:n:X:c:QHS0123456789Ero" OPTION
+  do
+      case "${OPTION}" in
+          'b') VERIFIEDBY="${OPTARG}";;
+          'n') NICID="${OPTARG}";;
+          'X') X="${OPTARG}";;
+          'c') CONFIGFILE="${OPTARG}";;
+          'r') TGGL_SAV="${TRUE}"
+               SAVOUT="-r";;
+          'Q') QUOTED="${TRUE}";;
+          'H') HTMOUT="-H"
+               CSVOUT=""
+               TGGL_HTM="${TRUE}"
+               TGGL_CSV="${FALSE}";;
+          'S') TGGL_SEG="${TRUE}"
+               SEGOUT="-S";;
+          'E') TGGL_EXC="${TRUE}"
+               EXCOUT="-E";;
+          '0') SHOW_VGRP0="${TRUE}"
+               OUT_VGRP0="-0";;
+          '1') SHOW_VGRP1="${TRUE}"
+               OUT_VGRP1="-1";;
+          '2') SHOW_VGRP2="${TRUE}"
+               OUT_VGRP2="-2";;
+          '3') SHOW_VGRP3="${TRUE}"
+               OUT_VGRP3="-3";;
+          '4') SHOW_VGRP4="${TRUE}"
+               OUT_VGRP4="-4";;
+          '5') SHOW_VGRP5="${TRUE}"
+               OUT_VGRP5="-5";;
+          '6') SHOW_VGRP6="${TRUE}"
+               OUT_VGRP6="-6";;
+          '7') SHOW_VGRP7="${TRUE}"
+               OUT_VGRP7="-7";;
+          '8') SHOW_VGRP8="${TRUE}"
+               OUT_VGRP8="-8";;
+          '9') SHOW_VGRP9="${TRUE}"
+               OUT_VGRP9="-9";;
+          'v') VERBOSE="${TRUE}";;
+          'V') VERYVERB="${TRUE}";;
+          '?') usagemsg_verifycmd_zbksh "${0}" ${VERSION} && return 1 ;;
+          ':') usagemsg_verifycmd_zbksh "${0}" ${VERSION} && return 1 ;;
+      esac
+  done
+   
+  shift $(( ${OPTIND} - 1 ))
+  
+#### 
+#### Check the command line arguments to verify they are valid values and that all
+#### necessary information was specified.
+#### 
+
+  trap "usagemsg_verifycmd_zbksh ${0}" EXIT
+
+      if [[ "_${VERIFIEDBY}" == "_" ]]
+      then
+          stderr_zbksh -- "# ERROR: Verified By User not specified"
+          return 2
+      fi
+
+      if [[ "_${CONFIGFILE}" == "_" ]]
+      then
+          stderr_zbksh -- "# ERROR: Configuration file not specified"
+          return 3
+      fi
+
+      if [[ ! -s ${CONFIGFILE} ]]
+      then
+          stderr_zbksh -- "# ERROR: Configuration file \"${CONFIGFILE}\" does not exist or is empty"
+          return 4
+      fi
+
+      if (( SHOW_VGRP1 == TRUE )) ||
+         (( SHOW_VGRP2 == TRUE )) ||
+         (( SHOW_VGRP3 == TRUE )) ||
+         (( SHOW_VGRP4 == TRUE )) ||
+         (( SHOW_VGRP5 == TRUE )) ||
+         (( SHOW_VGRP6 == TRUE )) ||
+         (( SHOW_VGRP7 == TRUE )) ||
+         (( SHOW_VGRP8 == TRUE )) ||
+         (( SHOW_VGRP9 == TRUE ))
+      then
+          SHOW_VGRP0="${FALSE}"
+          OUT_VGRP0=""
+      fi
+
+  trap "-" EXIT
+  
+################################################################
+
+    unset OSCMD
+
+    OSNAME="${OSNAME:-$( execl_zbksh 'uname -s' )}"
+    ITEM_VGRP1="${FALSE}"
+    ITEM_VGRP2="${FALSE}"
+    ITEM_VGRP3="${FALSE}"
+    ITEM_VGRP4="${FALSE}"
+    ITEM_VGRP5="${FALSE}"
+    ITEM_VGRP7="${FALSE}"
+    ITEM_VGRP8="${FALSE}"
+    ITEM_VGRP9="${FALSE}"
+
+  if ! configcmd_zbksh "${CONFIGFILE}"
+  then
+      return 0
+  fi
+
+# obsolete  [[ "_${OSNAME}" == _CYGWIN* ]] && OSNAME="Cygwin"
+
+################################################################
+
+#### 
+#### Display some program info and the command line arguments specified
+#### if "VERBOSE" mode was specified.
+#### 
+
+  (( VERYVERB == TRUE )) && set -x
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Program........: ${0}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Version........: ${VERSION}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Description....: ${DESC}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Verified By....: ${VERIFIEDBY}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# OS Name........: ${OSNAME}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# HTML Output....: ${HTMOUT}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Config File....: ${CONFIGFILE}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Header ConfFile: ${HEADER}"
+
+  (( VERBOSE  == TRUE )) && (( TGGL_SEG == TRUE  )) && stderr_zbksh -- "# Segmented/Categorized.: TRUE"
+  (( VERBOSE  == TRUE )) && (( TGGL_SEG == FALSE )) && stderr_zbksh -- "# Segmented/Categorized.: FALSE"
+
+  (( VERBOSE  == TRUE )) && (( TGGL_EXC == TRUE  )) && stderr_zbksh -- "# Exclude Verify Groups.: TRUE"
+  (( VERBOSE  == TRUE )) && (( TGGL_EXC == FALSE )) && stderr_zbksh -- "# Exclude Verify Groups.: FALSE"
+
+  (( VERBOSE  == TRUE )) && (( TGGL_DISPLAYNA == TRUE  )) && stderr_zbksh -- "# Display N/A Records...: TRUE"
+  (( VERBOSE  == TRUE )) && (( TGGL_DISPLAYNA == FALSE )) && stderr_zbksh -- "# Display N/A Records...: FALSE"
+
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP0 == TRUE  )) && stderr_zbksh -- "# Verification Group 0.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP0 == FALSE )) && stderr_zbksh -- "# Verification Group 0.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP1 == TRUE  )) && stderr_zbksh -- "# Verification Group 1.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP1 == FALSE )) && stderr_zbksh -- "# Verification Group 1.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP2 == TRUE  )) && stderr_zbksh -- "# Verification Group 2.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP2 == FALSE )) && stderr_zbksh -- "# Verification Group 2.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP3 == TRUE  )) && stderr_zbksh -- "# Verification Group 3.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP3 == FALSE )) && stderr_zbksh -- "# Verification Group 3.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP4 == TRUE  )) && stderr_zbksh -- "# Verification Group 4.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP4 == FALSE )) && stderr_zbksh -- "# Verification Group 4.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP5 == TRUE  )) && stderr_zbksh -- "# Verification Group 5.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP5 == FALSE )) && stderr_zbksh -- "# Verification Group 5.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP6 == TRUE  )) && stderr_zbksh -- "# Verification Group 6.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP6 == FALSE )) && stderr_zbksh -- "# Verification Group 6.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP7 == TRUE  )) && stderr_zbksh -- "# Verification Group 7.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP7 == FALSE )) && stderr_zbksh -- "# Verification Group 7.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP8 == TRUE  )) && stderr_zbksh -- "# Verification Group 8.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP8 == FALSE )) && stderr_zbksh -- "# Verification Group 8.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP9 == TRUE  )) && stderr_zbksh -- "# Verification Group 9.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP9 == FALSE )) && stderr_zbksh -- "# Verification Group 9.: FALSE"
+
+################################################################
+
+  if (( TGGL_SEG == TRUE  )) &&
+     (( HEADER   == TRUE  ))
+  then
+      if (( TGGL_HTM == TRUE ))
+      then
+          tablehead_zbksh -H -M "" 
+          tablehead_zbksh -H -M "${DESC}"
+      else
+          tablehead_zbksh -M "" 
+          tablehead_zbksh -M "${DESC}"
+      fi
+      HEADER="${FALSE}"
+      return 0
+  elif (( TGGL_SEG == FALSE )) &&
+       (( HEADER   == TRUE  ))
+  then
+      HEADER="${FALSE}"
+      return 0
+  fi
+
+#### If the verification groups are to be EXCLUDED (CLI: -E) then first include all items:
+  (( TGGL_EXC == TRUE  )) && SHOW_VGRP0="${TRUE}"
+
+#### If the verification groups are to be EXCLUDED (CLI: -E) and there is a verification
+#### item match, then do not process the item, simply return a successful return code:
+
+  if ( (( SHOW_VGRP1 == TRUE )) && (( ITEM_VGRP1 == TRUE )) && (( TGGL_EXC == TRUE )) ) ||
+     ( (( SHOW_VGRP2 == TRUE )) && (( ITEM_VGRP2 == TRUE )) && (( TGGL_EXC == TRUE )) ) ||
+     ( (( SHOW_VGRP3 == TRUE )) && (( ITEM_VGRP3 == TRUE )) && (( TGGL_EXC == TRUE )) ) ||
+     ( (( SHOW_VGRP4 == TRUE )) && (( ITEM_VGRP4 == TRUE )) && (( TGGL_EXC == TRUE )) ) ||
+     ( (( SHOW_VGRP5 == TRUE )) && (( ITEM_VGRP5 == TRUE )) && (( TGGL_EXC == TRUE )) ) ||
+     ( (( SHOW_VGRP6 == TRUE )) && (( ITEM_VGRP6 == TRUE )) && (( TGGL_EXC == TRUE )) ) ||
+     ( (( SHOW_VGRP7 == TRUE )) && (( ITEM_VGRP7 == TRUE )) && (( TGGL_EXC == TRUE )) ) ||
+     ( (( SHOW_VGRP8 == TRUE )) && (( ITEM_VGRP8 == TRUE )) && (( TGGL_EXC == TRUE )) ) ||
+     ( (( SHOW_VGRP9 == TRUE )) && (( ITEM_VGRP9 == TRUE )) && (( TGGL_EXC == TRUE )) )
+  then
+
+      return 0
+
+#### If ALL items are INCLUDED or a verification group is INCLUDED, and there is a 
+#### verification item match, then process it and show it in the output:
+
+  elif (( SHOW_VGRP0 == TRUE )) ||
+     ( (( SHOW_VGRP1 == TRUE )) && (( ITEM_VGRP1 == TRUE )) ) ||
+     ( (( SHOW_VGRP2 == TRUE )) && (( ITEM_VGRP2 == TRUE )) ) ||
+     ( (( SHOW_VGRP3 == TRUE )) && (( ITEM_VGRP3 == TRUE )) ) ||
+     ( (( SHOW_VGRP4 == TRUE )) && (( ITEM_VGRP4 == TRUE )) ) ||
+     ( (( SHOW_VGRP5 == TRUE )) && (( ITEM_VGRP5 == TRUE )) ) ||
+     ( (( SHOW_VGRP6 == TRUE )) && (( ITEM_VGRP6 == TRUE )) ) ||
+     ( (( SHOW_VGRP7 == TRUE )) && (( ITEM_VGRP7 == TRUE )) ) ||
+     ( (( SHOW_VGRP8 == TRUE )) && (( ITEM_VGRP8 == TRUE )) ) ||
+     ( (( SHOW_VGRP9 == TRUE )) && (( ITEM_VGRP9 == TRUE )) )
+  then
+
+      RESULT="${ANS[1]}"
+      REMARK=$( execl_zbksh "${OSCMD:-echo \"${OSNAME} Commands Undefined\"; ! : }" )
+      RETCODE="${?}"
+      [[ "_${CONFIG_RETURN}" != "_" ]] && [[ "_${CONFIG_RETURN}" == _[012] ]] && RETCODE="${CONFIG_RETURN}"
+      [[ "_${RETCODE}" != _[012] ]] && RETCODE="1"
+      RESULT="${ANS[${RETCODE}]}"
+
+      if (( RETCODE == 2 )) &&
+         [[ "_${TGGL_DISPLAYNA}" == "_${FALSE}" ]]
+      then
+
+          (( VERBOSE == TRUE )) && stderr_zbksh -- "# Command is N/A"
+
+      else
+
+          (( TGGL_CSV == TRUE )) && DESC="${DESC}"$'\n'"(${CONFIGFILE##*/})"
+          (( TGGL_HTM == TRUE )) && DESC="${DESC}"$'\n'"<FONT Size=\"1\">(${CONFIGFILE##*/})</FONT>"
+
+          (( TGGL_CSV == TRUE )) && csvout_zbksh  -X "${X}" -Q -R "${RESULT}" -D "${DESC}" -B "${VERIFIEDBY}" -M "${REMARK:-${OSCMD}}" -C "${RETCODE}"
+          (( TGGL_HTM == TRUE )) && htmlout_zbksh -X "${X}" -Q -R "${RESULT}" -D "${DESC}" -B "${VERIFIEDBY}" -M "${REMARK:-${OSCMD}}" -C "${RETCODE}"
+
+          RSLTFILE="${CONFFILE%.conf}.results"
+          RSLTFILE="${RSLTDIR}/${RSLTFILE##*/}"
+          if (( TGGL_SAV == TRUE ))
+          then
+              stdout_zbksh -- "${REMARK}" > "${RSLTFILE}"
+          else
+              [[ -f "${RSLTFILE}" ]] && rm -f "${RSLTFILE}"
+          fi
+      fi
+
+#### Otherwise return a successful return code:
+
+  else
+      return 0
+  fi
+
+  return ${RETCODE}
+
+}

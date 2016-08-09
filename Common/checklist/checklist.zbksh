@@ -1,0 +1,577 @@
+#!/usr/bin/ksh93
+#!/bin/bash
+#!/bin/zsh
+#!/usr/bin/ksh93.att
+#!/bin/ksh93
+################################################################
+#### 
+#### This script will run in KornShell93, Zshell, or Bash, all you need to do 
+#### is put the desired "shebang" line at the top of the script.
+#### 
+################################################################
+function usagemsg_checklist_zbksh {
+  stderr_zbksh -- ""
+  stderr_zbksh -- "${1:+Function: ${1}}${2:+        Version: ${2}}"
+
+  stderr_zbksh -- ""
+  stderr_zbksh -- "Data Center Automation - Unix/Linux Checklist"
+
+  stderr_zbksh -- ""
+  stderr_zbksh -- "This set of scripts provides an automated procedure to perform a"
+  stderr_zbksh -- "post-install verification of any Unix system in the data center environment."
+  stderr_zbksh -- "These scripts are written in a \"Multi-Shell\" configuration, meaning they"
+  stderr_zbksh -- "can be executed by several different interpreters, including Korn Shell"
+  stderr_zbksh -- "93, Bash, and Z-Shell."
+
+  stderr_zbksh -- ""
+  stderr_zbksh -- "Usage: ${1##*/} [-?vV] -b username [-R RequestNum]"
+  stderr_zbksh -- "        [-h sshHostname] [-p sshPortNum] [-u sshuser] [-O OSNAME]"
+  stderr_zbksh -- "        [-D domainName] [-L locationName] [-W clusterName]"
+  stderr_zbksh -- "        [-X \",\"] [-H] [-S] [-E] [-0123456789]"
+
+  stderr_zbksh -- "  Where:"
+  stderr_zbksh -- "    -v = Verbose mode - displays dpa_runreport function info"
+  stderr_zbksh -- "    -V = Very Verbose Mode - debug output displayed"
+  stderr_zbksh -- "    -b = Verified By Username"
+  stderr_zbksh -- "    -u = SSH Username\t\t\t(Default:root)"
+  stderr_zbksh -- "    -p = SSH Port number\t\t(Default:22)"
+  stderr_zbksh -- "    -h = SSH Hostname or IP address\t(Default:HOSTNAME)"
+  stderr_zbksh -- "    -O = Remote OS Name (Default:dynamically determined)"
+  stderr_zbksh -- "    -r = Save results from each verification check\t(Default:FALSE)"
+  stderr_zbksh -- "    -o = Output directory location for storage of results\t(Default:CONFDIR)"
+  stderr_zbksh -- "    -R = Change Request Number\t\t\t(Default:${CHGREQNUMB:-RITM000000})"
+  stderr_zbksh -- "    -D = DNS Domain Name\t\t(Default:${DOMAINNAME:-localdomain.pvt})"
+  stderr_zbksh -- "    -L = Data Center Location\t\t(Default:${DCLOCATION:-Anytown})"
+  stderr_zbksh -- "    -W = VMware Cluster Name\t\t(Default:N/A)"
+  stderr_zbksh -- "    -H = Generate HTML output\t\t(Default:CSV)"
+  stderr_zbksh -- "    -X = Field Delimiter\t\t(Default:\",\")"
+  stderr_zbksh -- "    -S = Segmented and Categorized Output\t\t(Default:\"Alphabetized\")"
+  stderr_zbksh -- "    -N = Display configuration items marked N/A in Output\t\t(Default:\"FALSE\")"
+
+  stderr_zbksh -- "    -0 = Include/Exclude ALL Verification Items:\t\t(Default:Include)"
+  stderr_zbksh -- "    -1 = Include/Exclude Non-PCI Verification Group 1:\t\t(Default:Include)"
+  stderr_zbksh -- "    -2 = Include/Exclude PCI Verification Group 2:\t\t(Default:Include)"
+  stderr_zbksh -- "    -3 = Include/Exclude High-Availability Group 3:\t(Default:Include)"
+  stderr_zbksh -- "    -4 = Include/Exclude Database Verification Group 4:\t\t(Default:Include)"
+  stderr_zbksh -- "    -5 = Include/Exclude Backup Verification Group 5:\t(Default:Include)"
+  stderr_zbksh -- "    -6 = Include/Exclude Verification Group 6:\t\t\t(Default:Include)"
+  stderr_zbksh -- "    -7 = Include/Exclude Verification Group 7:\t\t\t(Default:Include)"
+  stderr_zbksh -- "    -8 = Include/Exclude Verification Group 8:\t\t\t(Default:Include)"
+  stderr_zbksh -- "    -9 = Include/Exclude Verification Group 9:\t\t\t(Default:Include)"
+
+  stderr_zbksh -- ""
+  stderr_zbksh -- "    -E = Exclude Identified Verification Groups\t\t\t(Default:Include)"
+  stderr_zbksh -- "         This option reverses the logic of the Verification Groups."
+  stderr_zbksh -- "         Those Groups Identified on the command line are EXCLUDED."
+  stderr_zbksh -- ""
+
+  stderr_zbksh -- ""
+  stderr_zbksh -- "Example Usage:"
+  stderr_zbksh -- "    ${1} -L \"Anytown\" -R \"RITM1234567\" -b username -h localhost -H > tmp.html"
+
+  stderr_zbksh -- ""
+  stderr_zbksh -- "Author: Dana French, Copyright 2016, All Rights Reserved"
+  stderr_zbksh -- ""
+  stderr_zbksh -- "\"AutoContent\" enabled (Grutatxt)"
+  stderr_zbksh -- "\"Multi-Shell\" enabled"
+  stderr_zbksh -- "\"LocalRemote\" enabled"
+  stderr_zbksh -- ""
+
+  return 0
+
+}
+################################################################
+#### 
+#### Description:
+#### 
+#### This set of scripts provides an automated procedure to perform a
+#### post-install verification of any Unix/Linux system in the data center
+#### environment. These scripts are written in a "Multi-Shell" configuration,
+#### meaning they can be executed by several different interpreters,
+#### including Korn Shell 93, Bash, and Z-Shell. This scripts are also written
+#### so it can be executed on the local system or remotely using SSH.
+#### 
+#### 
+#### Assumptions:
+#### 
+#### Remote operation assumes the SSH keys have been exchanged for
+#### password-less execution.
+#### 
+#### 
+#### Dependencies:
+#### 
+#### Products:
+#### 
+#### A log file for each execution of the script and each command executed by
+#### the script, is generated at: /tmp/execl_<PID>.cmd where <PID> is the
+#### process ID number of the checklist script execution.
+#### 
+#### 
+#### Configured Usage:
+#### 
+#### This script has a configuration file named .checklist.conf that is
+#### expected to exist in the directory identified by the CONFDIR variable or
+#### in the home directory of the user running the checklist script. See the
+#### configuration file for details regarding settings and options.
+#### 
+####     ~/.checklist.conf		1st
+####     ${CONFDIR}/.checklist.conf	2nd
+#### 
+#### 
+#### Details:
+#### 
+################################################################
+function trap_checklist_zbksh {
+  stderr_zbksh -- "# INFO: key trapped and ignored during critical phase"
+  return 0
+}
+################################################################
+####
+#### Function to read the program configuration file. 
+####
+
+configure_checklist_zbksh()
+{
+
+#### Set some HTML table variables that are required regardless of whether or
+#### not the configuration file exists.
+
+  BGHEAD="lightblue"
+  BGGOOD="lightgreen"
+  BGBAD="pink"
+  BGNA="#999999"
+  BGNA="lightgrey"
+  CFILE=""
+
+#### First test for a checklist configuration file in the current users home directory.
+
+  if [[ -f ~/.checklist.conf ]]
+  then
+      CFILE=~/.checklist.conf
+
+#### Next test for a checklist configuration file in the ${CONFDIR} directory.
+
+  elif [[ -f "${CONFDIR}/.checklist.conf" ]]
+  then
+      CFILE="${CONFDIR}/.checklist.conf"
+  fi
+
+#### If  a configuration file exists, execute it as a "dot" script in the
+#### current environment.
+
+  if [[ "_${CFILE}" != "_" ]] &&
+     [[ -f "${CFILE}"      ]]
+  then
+      (( VERBOSE == TRUE )) && stderr_zbksh -- "# Configuration File: ${CFILE}"
+      (( VERBOSE == TRUE )) && cat ${CFILE}
+      . ${CFILE}
+  fi
+
+  return 0
+}
+################################################################
+function checklist_zbksh {
+if [[ "_${SHCODE}" == _korn ]]
+then
+  typeset VERSION="3.2"
+  typeset TRUE="0"
+  typeset FALSE="1"
+  typeset VERBOSE="${FALSE}"
+  typeset VERYVERB="${FALSE}"
+  typeset OPTIND="1"
+  typeset VERIFIEDBY=""
+  typeset X=","
+  typeset RMNUM="${CHGREQNUMB:-RITM000000}"
+  typeset HNAME="${SSHADDR}"
+  typeset DNAME="${DOMAINNAME:-localdomain.pvt}"
+  typeset LOCATION="${DCLOCATION:-Anytown}"
+  typeset VMWCLUSTER="N/A"
+  typeset CSVOUT="-C"
+  typeset HTMOUT=""
+  typeset TGGL_SEG="${FALSE}"
+  typeset SEGOUT=""
+  typeset TGGL_SAV="${FALSE}"
+  typeset SAVOUT=""
+  typeset TGGL_EXC="${FALSE}"
+  typeset EXCOUT=""
+  typeset SHOW_VGRP0="${TRUE}"		OUT_VGRP0=""
+  typeset SHOW_VGRP1="${FALSE}"		OUT_VGRP1=""
+  typeset SHOW_VGRP2="${FALSE}"		OUT_VGRP2=""
+  typeset SHOW_VGRP3="${FALSE}"		OUT_VGRP3=""
+  typeset SHOW_VGRP4="${FALSE}"		OUT_VGRP4=""
+  typeset SHOW_VGRP5="${FALSE}"		OUT_VGRP5=""
+  typeset SHOW_VGRP6="${FALSE}"		OUT_VGRP6=""
+  typeset SHOW_VGRP7="${FALSE}"		OUT_VGRP7=""
+  typeset SHOW_VGRP8="${FALSE}"		OUT_VGRP8=""
+  typeset SHOW_VGRP9="${FALSE}"		OUT_VGRP9=""
+elif [[ "_${SHCODE}" == _bash ]]
+then
+  declare VERSION="3.2"
+  declare TRUE="0"
+  declare FALSE="1"
+  declare VERBOSE="${FALSE}"
+  declare VERYVERB="${FALSE}"
+  declare OPTIND="1"
+  declare VERIFIEDBY=""
+  declare X=","
+  declare RMNUM="${CHGREQNUMB:-RITM000000}"
+  declare HNAME="${SSHADDR}"
+  declare DNAME="${DOMAINNAME:-localdomain.pvt}"
+  declare LOCATION="${DCLOCATION:-Anytown}"
+  declare VMWCLUSTER="N/A"
+  declare CSVOUT="-C"
+  declare HTMOUT=""
+  declare TGGL_SEG="${FALSE}"
+  declare SEGOUT=""
+  declare TGGL_SAV="${FALSE}"
+  declare SAVOUT=""
+  declare TGGL_EXC="${FALSE}"
+  declare EXCOUT=""
+  declare SHOW_VGRP0="${TRUE}"	OUT_VGRP0=""
+  declare SHOW_VGRP1="${FALSE}"	OUT_VGRP1=""
+  declare SHOW_VGRP2="${FALSE}"	OUT_VGRP2=""
+  declare SHOW_VGRP3="${FALSE}"	OUT_VGRP3=""
+  declare SHOW_VGRP4="${FALSE}"	OUT_VGRP4=""
+  declare SHOW_VGRP5="${FALSE}"	OUT_VGRP5=""
+  declare SHOW_VGRP6="${FALSE}"	OUT_VGRP6=""
+  declare SHOW_VGRP7="${FALSE}"	OUT_VGRP7=""
+  declare SHOW_VGRP8="${FALSE}"	OUT_VGRP8=""
+  declare SHOW_VGRP9="${FALSE}"	OUT_VGRP9=""
+else
+  VERSION="3.2"
+  TRUE="0"
+  FALSE="1"
+  VERBOSE="${FALSE}"
+  VERYVERB="${FALSE}"
+  OPTIND="1"
+  VERIFIEDBY=""
+  X=","
+  RMNUM="${CHGREQNUMB:-RITM000000}"
+  HNAME="${SSHADDR}"
+  DNAME="${DOMAINNAME:-localdomain.pvt}"
+  LOCATION="${DCLOCATION:-Anytown}"
+  VMWCLUSTER="N/A"
+  CSVOUT="-C"
+  HTMOUT=""
+  TGGL_SEG="${FALSE}"
+  SEGOUT=""
+  TGGL_SAV="${FALSE}"
+  SAVOUT=""
+  TGGL_EXC="${FALSE}"
+  EXCOUT=""
+  SHOW_VGRP0="${TRUE}"	OUT_VGRP0=""
+  SHOW_VGRP1="${FALSE}"	OUT_VGRP1=""
+  SHOW_VGRP2="${FALSE}"	OUT_VGRP2=""
+  SHOW_VGRP3="${FALSE}"	OUT_VGRP3=""
+  SHOW_VGRP4="${FALSE}"	OUT_VGRP4=""
+  SHOW_VGRP5="${FALSE}"	OUT_VGRP5=""
+  SHOW_VGRP6="${FALSE}"	OUT_VGRP6=""
+  SHOW_VGRP7="${FALSE}"	OUT_VGRP7=""
+  SHOW_VGRP8="${FALSE}"	OUT_VGRP8=""
+  SHOW_VGRP9="${FALSE}"	OUT_VGRP9=""
+fi
+
+################################################################
+
+configure_checklist_zbksh
+
+DNAME="${DOMAINNAME:-localdomain.pvt}"
+LOCATION="${DCLOCATION:-Anytown}"
+RMNUM="${CHGREQNUMB:-RITM000000}"
+
+################################################################
+
+#### 
+#### Process the command line options and arguments, saving
+#### the values as appropriate.
+#### 
+
+  while getopts ":vVb:X:u:p:h:R:D:L:W:O:HSN0123456789Ero" OPTION
+  do
+      case "${OPTION}" in
+          'b') VERIFIEDBY="${OPTARG}";;
+          'X') X="${OPTARG}";;
+          'u') SSHUSER="${OPTARG}";;
+          'p') SSHPORT="${OPTARG}";;
+          'O') OSNAME="${OPTARG}";;
+          'h') HNAME="${OPTARG}"
+               SSHADDR="${OPTARG}";;
+          'r') TGGL_SAV="${TRUE}"
+               SAVOUT="-r";;
+          'o') RSLTDIR="${OPTARG}";;
+          'R') RMNUM="${OPTARG}";;
+          'D') DNAME="${OPTARG}";;
+          'L') LOCATION="${OPTARG}";;
+          'W') VMWCLUSTER="${OPTARG}";;
+          'H') HTMOUT="-H"
+               CSVOUT="";;
+          'S') TGGL_SEG="${TRUE}"
+               SEGOUT="-S";;
+          'E') TGGL_EXC="${TRUE}"
+               EXCOUT="-E";;
+          'N') TGGL_DISPLAYNA="${TRUE}";;
+          '0') SHOW_VGRP0="${TRUE}"
+               OUT_VGRP0="-0";;
+          '1') SHOW_VGRP1="${TRUE}"
+               OUT_VGRP1="-1";;
+          '2') SHOW_VGRP2="${TRUE}"
+               OUT_VGRP2="-2";;
+          '3') SHOW_VGRP3="${TRUE}"
+               OUT_VGRP3="-3";;
+          '4') SHOW_VGRP4="${TRUE}"
+               OUT_VGRP4="-4";;
+          '5') SHOW_VGRP5="${TRUE}"
+               OUT_VGRP5="-5";;
+          '6') SHOW_VGRP6="${TRUE}"
+               OUT_VGRP6="-6";;
+          '7') SHOW_VGRP7="${TRUE}"
+               OUT_VGRP7="-7";;
+          '8') SHOW_VGRP8="${TRUE}"
+               OUT_VGRP8="-8";;
+          '9') SHOW_VGRP9="${TRUE}"
+               OUT_VGRP9="-9";;
+          'v') VERBOSE="${TRUE}";;
+          'V') VERYVERB="${TRUE}";;
+          '?') usagemsg_checklist_zbksh "${0}" ${VERSION} && return 1 ;;
+          ':') usagemsg_checklist_zbksh "${0}" ${VERSION} && return 1 ;;
+      esac
+  done
+   
+  shift $(( ${OPTIND} - 1 ))
+  
+################################################################
+#### 
+#### Check the command line arguments to verify they are valid values and that all
+#### necessary information was specified.
+#### 
+
+  trap "usagemsg_checklist_zbksh ${0}" EXIT
+
+  if [[ "_${VERIFIEDBY}" == "_" ]]
+  then
+      stderr_zbksh -- "# ERROR: ${0}: Verified By Username not specified"
+      return 6
+  fi
+
+#   if [[ "_${SSHADDR}" == "_" ]]
+#   then
+#       stderr_zbksh -- "# ERROR: ${0}: Hostname or IP address of target system not specified"
+#       return 7
+#   fi
+
+  if [[ "_${RMNUM}" == "_" ]]
+  then
+    stderr_zbksh -- "# ERROR: ${0} Change Request Number not specified"
+    return 2
+  fi
+
+#   if [[ "_${HNAME}" == "_" ]]
+#   then
+#     stderr_zbksh -- "# ERROR: ${0}: Server Name not specified"
+#     return 3
+#   fi
+
+  if [[ "_${DNAME}" == "_" ]]
+  then
+    stderr_zbksh -- "# ERROR: ${0}: Domain Name not specified"
+    return 4
+  fi
+
+  if [[ "_${LOCATION}" == "_" ]]
+  then
+    stderr_zbksh -- "# ERROR: ${0}: Location not specified"
+    return 5
+  fi
+
+  trap "-" EXIT
+  
+################################################################
+
+#### 
+#### Display some program info and the command line arguments specified
+#### if "VERBOSE" mode was specified.
+#### 
+
+  (( VERYVERB == TRUE )) && set -x
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Program...............: ${0}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Version...............: ${VERSION}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Verified By User Name.: ${VERIFIEDBY}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Field Delimeter.......: ${X}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# EXEC Mode.............: ${EXECMODE}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Change Request Number.: ${RMNUM}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Server Name...........: ${HNAME}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# SSH Address...........: ${SSHADDR}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Target OSNAME.........: ${OSNAME}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Domain Name...........: ${DNAME}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Location..............: ${LOCATION}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# VMware Cluster........: ${VMWCLUSTER}"
+
+  (( VERBOSE  == TRUE )) && (( TGGL_SEG == TRUE  )) && stderr_zbksh -- "# Segmented/Categorized.: TRUE"
+  (( VERBOSE  == TRUE )) && (( TGGL_SEG == FALSE )) && stderr_zbksh -- "# Segmented/Categorized.: FALSE"
+
+  (( VERBOSE  == TRUE )) && (( TGGL_EXC == TRUE  )) && stderr_zbksh -- "# Exclude Verify Groups.: TRUE"
+  (( VERBOSE  == TRUE )) && (( TGGL_EXC == FALSE )) && stderr_zbksh -- "# Exclude Verify Groups.: FALSE"
+
+  (( VERBOSE  == TRUE )) && (( TGGL_DISPLAYNA == TRUE  )) && stderr_zbksh -- "# Display N/A Records...: TRUE"
+  (( VERBOSE  == TRUE )) && (( TGGL_DISPLAYNA == FALSE )) && stderr_zbksh -- "# Display N/A Records...: FALSE"
+
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP0 == TRUE  )) && stderr_zbksh -- "# Verification Group 0.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP0 == FALSE )) && stderr_zbksh -- "# Verification Group 0.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP1 == TRUE  )) && stderr_zbksh -- "# Verification Group 1.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP1 == FALSE )) && stderr_zbksh -- "# Verification Group 1.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP2 == TRUE  )) && stderr_zbksh -- "# Verification Group 2.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP2 == FALSE )) && stderr_zbksh -- "# Verification Group 2.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP3 == TRUE  )) && stderr_zbksh -- "# Verification Group 3.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP3 == FALSE )) && stderr_zbksh -- "# Verification Group 3.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP4 == TRUE  )) && stderr_zbksh -- "# Verification Group 4.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP4 == FALSE )) && stderr_zbksh -- "# Verification Group 4.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP5 == TRUE  )) && stderr_zbksh -- "# Verification Group 5.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP5 == FALSE )) && stderr_zbksh -- "# Verification Group 5.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP6 == TRUE  )) && stderr_zbksh -- "# Verification Group 6.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP6 == FALSE )) && stderr_zbksh -- "# Verification Group 6.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP7 == TRUE  )) && stderr_zbksh -- "# Verification Group 7.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP7 == FALSE )) && stderr_zbksh -- "# Verification Group 7.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP8 == TRUE  )) && stderr_zbksh -- "# Verification Group 8.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP8 == FALSE )) && stderr_zbksh -- "# Verification Group 8.: FALSE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP9 == TRUE  )) && stderr_zbksh -- "# Verification Group 9.: TRUE"
+  (( VERBOSE  == TRUE )) && (( SHOW_VGRP9 == FALSE )) && stderr_zbksh -- "# Verification Group 9.: FALSE"
+
+################################################################
+################################################################
+################################################################
+#### 
+#### Display the table header information according to the user specified
+#### output method (CSV or HTML).
+#### 
+
+  unset VERBSTAT
+  (( VERBOSE == TRUE )) && VERBSTAT="${TRUE}"
+
+  mkheader_zbksh	${VERBSTAT:+ -v} -X "${X}" -R "${RMNUM}" ${HNAME:+-h ${HNAME}} -D "${DNAME}" -L "${LOCATION}" -W "${VMWCLUSTER}"  ${HTMOUT}
+
+################################################################
+################################################################
+################################################################
+#### 
+#### Loop thru each configuration file, processing the appropriate operating
+#### system command and capturing the success or failure status. Then 
+#### display the output according to the user specified method (CSV or HTML).
+#### 
+
+    typeset CUSTCONFS=( $( ls -1 ${CONFDIR}/.*.conf 2>/dev/null | grep -v '\.checklist\.conf' ) )
+
+    if [[ "_${#CUSTCONFS[@]}" == _[0-9]* ]] &&
+       ((   ${#CUSTCONFS[@]}  >    0     ))
+    then
+
+        for CONFFILE in "${CUSTCONFS[@]}"
+        do
+            verifycmd_zbksh ${VERBSTAT:+ -v} -X "${X}" -b ${VERIFIEDBY} -Q -c "${CONFFILE}"  ${HTMOUT} ${SEGOUT} ${EXCOUT} ${SAVOUT} ${OUT_VGRP0} ${OUT_VGRP1} ${OUT_VGRP2} ${OUT_VGRP3} ${OUT_VGRP4} ${OUT_VGRP5} ${OUT_VGRP6} ${OUT_VGRP7} ${OUT_VGRP8} ${OUT_VGRP9}
+        done
+    fi
+
+################################################################
+################################################################
+################################################################
+#### 
+#### Display the table footer information according to the user specified
+#### output method (CSV or HTML).
+#### 
+
+  mkfooter_zbksh		${VERBSTAT:+ -v} -X "${X}"  ${HTMOUT}
+
+  return 0
+
+}
+
+################################################################
+################################################################
+################################################################
+#### 
+#### Main Body of Script Begins Here
+#### 
+################################################################
+
+FPATH="/usr/local/scripts/checklist-3.2"
+export FPATH
+
+CONFDIR="/usr/local/scripts/checklist-3.2"
+RSLTDIR="${CONFDIR}"
+export CONFDIR RSLTDIR
+
+TRUE="0"
+FALSE="1"
+
+typeset OSCMD
+
+#### 
+#### Extract the "shebang" line from the beginning of the script.
+
+read SHEBANG < "${0}"
+export SHEBANG
+
+if [[ "_${SHEBANG}" != "_#!"* ]]
+then
+    stderr_zbksh -- "# ERROR: SHEBANG line not specified at the beginning of script"
+    exit 1
+fi
+
+#### 
+#### Test the "shebang" line to determine what shell interpreter is specified.
+
+SHCODE="unknown"
+[[ "_${SHEBANG}" == _*/ksh*  ]] && SHCODE="korn"
+[[ "_${SHEBANG}" == _*/bash* ]] && SHCODE="bash"
+[[ "_${SHEBANG}" == _*/zsh*  ]] && SHCODE="zshell"
+export SHCODE
+
+################################################################
+#### Modify the commands and script according to the shell intpreter.
+#### 
+
+if [[ "_${SHCODE}" == _korn ]]
+then
+  typeset GBL_ECHO="print"
+#  typeset SSHPORT="22"
+#  typeset SSHUSER="root"
+#  typeset SSHADDR=""
+#  typeset CMD_SSH="/usr/bin/ssh"
+#  typeset OPT_SSH="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet -o BatchMode=yes -o ConnectTimeout=30"
+ typeset LOG_EXECL="/tmp/execl_${$}.cmd"
+elif [[ "_${SHCODE}" == _bash ]]
+then
+  shopt -s extglob    # Turn on extended globbing
+  declare GBL_ECHO="echo -e"
+#  declare SSHPORT="22"
+#  declare SSHUSER="root"
+#  declare SSHADDR=""
+#  declare CMD_SSH="/usr/bin/ssh"
+#  declare OPT_SSH="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet -o BatchMode=yes -o ConnectTimeout=30"
+  declare LOG_EXECL="/tmp/execl_${$}.cmd"
+elif [[ "_${SHCODE}" == _zshell ]]
+then
+  emulate ksh93
+  typeset GBL_ECHO="print"
+#  typeset SSHPORT="22"
+#  typeset SSHUSER="root"
+#  typeset SSHADDR=""
+#  typeset CMD_SSH="/usr/bin/ssh"
+#  typeset OPT_SSH="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet -o BatchMode=yes -o ConnectTimeout=30"
+  typeset LOG_EXECL="/tmp/execl_${$}.cmd"
+else
+  GBL_ECHO="echo -e"
+#  SSHPORT="22"
+#  SSHUSER="root"
+#  SSHADDR=""
+#  CMD_SSH="/usr/bin/ssh"
+#  OPT_SSH="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet -o BatchMode=yes -o ConnectTimeout=30"
+  LOG_EXECL="/tmp/execl_${$}.cmd"
+fi
+
+################################################################
+#### Call the main script function to begin processing.
+#### 
+
+checklist_zbksh "${@}"
+
+exit ${?}

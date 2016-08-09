@@ -1,0 +1,16 @@
+configcmd_zbksh ()
+{
+  RETURNCODE="0"
+  CFILE="${1}"
+  
+  (( VERBOSE == TRUE )) && stderr_zbksh -- "# Configuration File: ${CFILE}"
+  
+  if [[ -f ${CFILE} ]]
+  then
+      (( VERBOSE == TRUE )) && sed -e 's/^/#### /g' "${CFILE}" >&2
+      . ${CFILE}
+  fi
+  
+  return ${RETURNCODE}
+}
+

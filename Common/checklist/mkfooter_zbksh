@@ -1,0 +1,107 @@
+function mkfooter_zbksh {
+  typeset VERSION="3.2"
+  typeset TRUE="0"
+  typeset FALSE="1"
+  typeset VERBOSE="${FALSE}"
+  typeset VERYVERB="${FALSE}"
+  typeset OPTIND="1"
+  typeset DESC="Create spreadsheet header information"
+  typeset ANS[0]="Good"
+  typeset ANS[1]="Bad"
+  typeset ANS[2]="N/A"
+  typeset OSNAME="${OSNAME:-$( execl_zbksh 'uname -s' )}"
+  typeset OSVER="undefined"
+  typeset RESULT="${ANS[1]}"
+  typeset X=","
+  typeset RETCODE="99"
+  typeset RMNUM="${CHGREQNUMB:-RITM000000}"
+  typeset HNAME=""
+  typeset DNAME="${DOMAINNAME:-localdomain.pvt}"
+  typeset LOCATION="${DCLOCATION:-Anytown}"
+  typeset VMWCLUSTER=""
+  typeset CSVOUT="-C"
+  typeset HTMOUT=""
+  typeset TGGL_HTM="${FALSE}"
+  typeset TGGL_CSV="${TRUE}"
+
+################################################################
+
+#### 
+#### Process the command line options and arguments, saving
+#### the values as appropriate.
+#### 
+
+  while getopts ":vVu:X:R:h:D:L:W:H" OPTION
+  do
+      case "${OPTION}" in
+
+          'R') RMNUM="${OPTARG}";;
+          'h') HNAME="${OPTARG}";;
+          'D') DNAME="${OPTARG}";;
+          'L') LOCATION="${OPTARG}";;
+          'W') VMWCLUSTER="${OPTARG}";;
+          'X') X="${OPTARG}";;
+          'H') HTMOUT="-H"
+               CSVOUT=""
+               TGGL_HTM="${TRUE}"
+               TGGL_CSV="${FALSE}";;
+          'v') VERBOSE="${TRUE}";;
+          'V') VERYVERB="${TRUE}";;
+          '?') usagemsg_mkfooter_zbksh "${0}" ${VERSION} && return 1 ;;
+          ':') usagemsg_mkfooter_zbksh "${0}" ${VERSION} && return 1 ;;
+      esac
+  done
+   
+  shift $(( ${OPTIND} - 1 ))
+  
+#### 
+#### Check the command line arguments to verify they are valid values and that all
+#### necessary information was specified.
+#### 
+
+  trap "usagemsg_mkfooter_zbksh ${0}" EXIT
+
+  trap "-" EXIT
+  
+################################################################
+
+#### 
+#### Display some program info and the command line arguments specified
+#### if "VERBOSE" mode was specified.
+#### 
+
+  (( VERYVERB == TRUE )) && set -x
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Program........: ${0}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Version........: ${VERSION}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# Description....: ${DESC}"
+  (( VERBOSE  == TRUE )) && stderr_zbksh -- "# OS Name........: ${OSNAME}"
+
+################################################################
+################################################################
+################################################################
+
+  RESULT="${ANS[1]}"
+
+  if (( TGGL_CSV == TRUE ))
+  then
+      stdout_zbksh -- "CSV Output Complete"
+  fi
+
+  if (( TGGL_HTM == TRUE ))
+  then
+      X="</TH><TH>"
+      stdout_zbksh -- "</TABLE></P>"
+      stdout_zbksh -- "</BODY></HTML>"
+  fi
+
+################################################################
+################################################################
+################################################################
+
+  RETCODE="0"
+  [[ "_${RESULT}" == "_${ANS[1]}" ]] && RETCODE="1"
+
+  return ${RETCODE}
+
+}
+################################################################
